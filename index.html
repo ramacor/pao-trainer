@@ -1,0 +1,1980 @@
+<title>PAO Trainer</title>
+<style>
+  :root{
+    --bg:#F4F5F8; --surface:#FFFFFF; --surface2:#EBEDF2; --line:#E1E4EB;
+    --ink:#1B1E27; --ink2:#5B6172; --ink3:#9AA0B1;
+    --p:#6C56E0; --a:#B4740A; --o:#0E8A6B; --accent:#6C56E0;
+    --p-bg:#EEEAFD; --a-bg:#F7EFDC; --o-bg:#DFF3EC;
+    --ok:#12866B; --ok-press:#0C6D56; --bad:#C24E38; --bad-press:#A63F2B;
+    --ok-glyph:#FFFFFF; --bad-glyph:#FFFFFF; --bad-ink:#C24E38;
+    --h0:#F4D8D0; --h1:#F4E4C9; --h2:#EDEAD6; --h3:#D6ECE3; --h4:#B4E2D2; --h-ink:#1B1E27;
+    --shadow:0 1px 3px rgba(20,22,30,.06),0 4px 16px rgba(20,22,30,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#000000; --surface:#101218; --surface2:#1A1D25; --line:#23262F;
+      --ink:#E9EBF2; --ink2:#9CA3B5; --ink3:#5F6575;
+      --p:#A493FF; --a:#E5A63E; --o:#35C79B; --accent:#7C67F2;
+      --p-bg:#1D1936; --a-bg:#2A2113; --o-bg:#0F271F;
+      --ok:#0F4437; --ok-press:#155A49; --bad:#47231B; --bad-press:#5C2D22;
+      --ok-glyph:#41D9AE; --bad-glyph:#F09B84; --bad-ink:#F09B84;
+      --h0:#43221A; --h1:#3D2D12; --h2:#34301C; --h3:#143A2F; --h4:#0F4D3C; --h-ink:#E9EBF2;
+      --shadow:none;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F4F5F8; --surface:#FFFFFF; --surface2:#EBEDF2; --line:#E1E4EB;
+    --ink:#1B1E27; --ink2:#5B6172; --ink3:#9AA0B1;
+    --p:#6C56E0; --a:#B4740A; --o:#0E8A6B; --accent:#6C56E0;
+    --p-bg:#EEEAFD; --a-bg:#F7EFDC; --o-bg:#DFF3EC;
+    --ok:#12866B; --ok-press:#0C6D56; --bad:#C24E38; --bad-press:#A63F2B;
+    --ok-glyph:#FFFFFF; --bad-glyph:#FFFFFF; --bad-ink:#C24E38;
+    --h0:#F4D8D0; --h1:#F4E4C9; --h2:#EDEAD6; --h3:#D6ECE3; --h4:#B4E2D2; --h-ink:#1B1E27;
+    --shadow:0 1px 3px rgba(20,22,30,.06),0 4px 16px rgba(20,22,30,.05);
+  }
+  :root[data-theme="dark"]{
+    --bg:#000000; --surface:#101218; --surface2:#1A1D25; --line:#23262F;
+    --ink:#E9EBF2; --ink2:#9CA3B5; --ink3:#5F6575;
+    --p:#A493FF; --a:#E5A63E; --o:#35C79B; --accent:#7C67F2;
+    --p-bg:#1D1936; --a-bg:#2A2113; --o-bg:#0F271F;
+    --ok:#0F4437; --ok-press:#155A49; --bad:#47231B; --bad-press:#5C2D22;
+    --ok-glyph:#41D9AE; --bad-glyph:#F09B84; --bad-ink:#F09B84;
+    --h0:#43221A; --h1:#3D2D12; --h2:#34301C; --h3:#143A2F; --h4:#0F4D3C; --h-ink:#E9EBF2;
+    --shadow:none;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg)}
+  body{
+    font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink); font-size:16px; line-height:1.45;
+    -webkit-font-smoothing:antialiased; overscroll-behavior:none;
+  }
+  button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer;touch-action:manipulation}
+  input,select{font:inherit;color:var(--ink)}
+  .numfont{font-family:ui-rounded,-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+
+  #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+  #view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px 24px;max-width:560px;width:100%;margin:0 auto}
+
+  /* ---------- tab bar ---------- */
+  #tabbar{
+    display:flex;border-top:1px solid var(--line);background:var(--surface);
+    padding-bottom:env(safe-area-inset-bottom)
+  }
+  #tabbar button{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:9px 0 7px;color:var(--ink3);font-size:10.5px;font-weight:600;letter-spacing:.02em
+  }
+  #tabbar button.on{color:var(--ink)}
+  #tabbar svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---------- shared ---------- */
+  h1{font-size:22px;font-weight:800;margin:2px 0 14px;letter-spacing:-.01em}
+  .label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1;min-width:0}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--ink);color:var(--bg);border-radius:13px;
+    padding:14px 18px;font-weight:700;font-size:16px;width:100%
+  }
+  .btn:active{opacity:.82}
+  .btn.quiet{background:var(--surface2);color:var(--ink)}
+  .btn.small{width:auto;padding:9px 14px;font-size:14px;border-radius:11px}
+  .seg{display:flex;background:var(--surface2);border-radius:11px;padding:3px;gap:2px}
+  .seg button{flex:1;padding:8px 4px;border-radius:9px;font-size:14px;font-weight:600;color:var(--ink2);white-space:nowrap}
+  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+  .field{width:100%;background:var(--surface2);border:none;border-radius:11px;padding:11px 13px;font-size:16px;outline:none}
+  .field::placeholder{color:var(--ink3)}
+  select.field{-webkit-appearance:none;appearance:none}
+  .hint{font-size:13px;color:var(--ink2)}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:99px;padding:5px 12px;font-size:14px;font-weight:600}
+  .chip .numfont{font-weight:800}
+  .divider{height:1px;background:var(--line);margin:4px 0}
+
+  /* P/A/O element rows */
+  .el{display:flex;align-items:flex-start;gap:10px}
+  .el .tag{
+    flex:none;width:24px;height:24px;border-radius:8px;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800
+  }
+  .el.p .tag{background:var(--p-bg);color:var(--p)} .el.a .tag{background:var(--a-bg);color:var(--a)} .el.o .tag{background:var(--o-bg);color:var(--o)}
+  .el .txt{font-size:15.5px;font-weight:550;padding-top:1px}
+
+  /* toggle */
+  .tgl{position:relative;width:48px;height:29px;flex:none}
+  .tgl input{position:absolute;opacity:0;width:100%;height:100%;margin:0}
+  .tgl span{position:absolute;inset:0;border-radius:99px;background:var(--surface2);transition:background .15s}
+  .tgl span::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+  .tgl input:checked + span{background:var(--accent)}
+  .tgl input:checked + span::after{transform:translateX(19px)}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
+
+  /* ---------- session ---------- */
+  #session{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:40;user-select:none;-webkit-user-select:none}
+  #session[hidden]{display:none}
+  .sess-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0;padding-top:calc(env(safe-area-inset-top) + 14px)}
+  .sess-top .icobtn{width:40px;height:40px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+  .sess-top .icobtn.on{background:var(--ink);color:var(--bg)}
+  .sess-top svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .sess-count{font-size:12px;font-weight:700;color:var(--ink3);letter-spacing:.04em}
+  #stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 22px;gap:26px;min-height:0}
+  .dirlabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+  .bignum{display:flex;gap:.35em;font-weight:800;letter-spacing:-.01em;line-height:1}
+  .bignum.n2{font-size:min(38vw,180px)}
+  .bignum.n4{font-size:min(21vw,110px)}
+  .bignum.n6{font-size:min(13.5vw,72px)}
+  .bigword{font-size:clamp(26px,7.5vw,40px);font-weight:800;text-align:center;text-wrap:balance;line-height:1.2}
+  #answer{width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px;min-height:118px}
+  #answer .ansnum{font-size:56px;font-weight:800;text-align:center;line-height:1}
+  #answer .pairnum{flex:none;font-size:13px;font-weight:800;color:var(--ink3);width:26px;padding-top:3px;text-align:right}
+  .fade{animation:fade .18s ease-out}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .sess-btns{display:flex;gap:12px;padding:0 16px;padding-bottom:calc(env(safe-area-inset-bottom) + 16px)}
+  .sess-btns button{
+    flex:1;height:88px;border-radius:22px;display:flex;align-items:center;justify-content:center
+  }
+  .sess-btns svg{width:38px;height:38px;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;fill:none}
+  #btn-bad{background:var(--bad)} #btn-bad:active{background:var(--bad-press)} #btn-bad svg{stroke:var(--bad-glyph)}
+  #btn-ok{background:var(--ok)} #btn-ok:active{background:var(--ok-press)} #btn-ok svg{stroke:var(--ok-glyph)}
+  #btn-ok .cont{display:none;color:var(--ok-glyph);font-weight:800;font-size:17px;margin-left:6px}
+  #session.answering #btn-ok .cont{display:block}
+
+  /* ---------- tempo ---------- */
+  .tempobar{width:min(70vw,320px);height:4px;border-radius:99px;background:var(--surface2);overflow:hidden}
+  .tempobar i{display:block;height:100%;background:var(--accent);border-radius:99px;animation:tempodrain linear forwards}
+  @keyframes tempodrain{from{width:100%}to{width:0}}
+  #session.encoding #btn-bad{display:none}
+  #session.encoding #btn-ok .cont{display:block}
+
+  /* ---------- atleten ---------- */
+  .athcard{display:flex;gap:14px;align-items:center;text-align:left;width:100%;padding:14px}
+  .athcard .teaser{font-size:13.5px;color:var(--ink2);margin-top:4px;line-height:1.45}
+  .ath-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+
+  /* ---------- reeks-proef ---------- */
+  .seqrows{display:flex;flex-direction:column;gap:12px;align-items:center}
+  .seqrow{display:flex;gap:.55em;font-weight:800;font-size:clamp(22px,7vw,32px);line-height:1}
+  .seqrow .pr{min-width:1.5em;text-align:center}
+  .seqrow .pr.emp{color:var(--ink3)}
+  .seqrow .pr.good{color:var(--o)}
+  .seqrow .pr.wrong{color:var(--bad-ink)}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:300px;margin-top:6px}
+  .keypad button{height:54px;border-radius:14px;background:var(--surface);border:1px solid var(--line);font-size:22px;font-weight:700}
+  .keypad button:active{background:var(--surface2)}
+  .keypad button:disabled{opacity:.35}
+
+  /* ---------- library ---------- */
+  .libcard{display:flex;gap:10px;align-items:center;padding:13px 14px}
+  .libcard .libmain{display:flex;gap:14px;align-items:stretch;text-align:left;min-width:0;flex:1}
+  .libcard.excluded .libmain{opacity:.4}
+  .tgl.sm{width:40px;height:25px}
+  .tgl.sm span::after{width:19px;height:19px}
+  .tgl.sm input:checked + span::after{transform:translateX(15px)}
+  .libcard .big{flex:none;width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .libcard .big .n{font-size:32px;font-weight:800;line-height:1}
+  .libcard .big .code{font-size:10.5px;font-weight:700;letter-spacing:.12em;color:var(--ink3)}
+  .libcard .els{display:flex;flex-direction:column;gap:7px;justify-content:center}
+  .libcard .el .txt{font-size:14.5px}
+  .thumb{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--surface2);margin-top:4px}
+  .ansimg{max-height:150px;max-width:75%;border-radius:14px;object-fit:contain;align-self:center}
+  .photorow{display:flex;align-items:center;gap:12px}
+  .photorow img{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:none}
+  .filebtn input{display:none}
+  .badge{display:inline-flex;align-items:center;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700}
+  .badge.weak{background:var(--h0);color:var(--h-ink)}
+  .badge.off{background:var(--surface2);color:var(--ink2)}
+
+  /* ---------- heatmap ---------- */
+  .heat{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+  .heat button{
+    aspect-ratio:1;border-radius:8px;background:var(--surface2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:12.5px;font-weight:700;color:var(--ink3);border:1px solid transparent
+  }
+  .heat button.s0{background:var(--h0);color:var(--h-ink)}
+  .heat button.s1{background:var(--h1);color:var(--h-ink)}
+  .heat button.s2{background:var(--h2);color:var(--h-ink)}
+  .heat button.s3{background:var(--h3);color:var(--h-ink)}
+  .heat button.s4{background:var(--h4);color:var(--h-ink)}
+  .heat button.sel{border-color:var(--ink)}
+  .heat button.x{opacity:.35}
+  .legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
+  .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+
+  .bars{display:flex;align-items:flex-end;gap:6px;height:90px}
+  .bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+  .bars .b i{width:100%;border-radius:6px 6px 3px 3px;background:var(--p);opacity:.75;min-height:3px}
+  .bars .b span{font-size:10px;color:var(--ink3);font-weight:600}
+
+  /* ---------- modal ---------- */
+  #modal{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}
+  #modal[hidden]{display:none}
+  #modal .scrim{position:absolute;inset:0;background:rgba(8,9,12,.5)}
+  #modal .sheet{
+    position:relative;background:var(--surface);width:100%;max-width:560px;
+    border-radius:22px 22px 0 0;padding:20px 18px;max-height:88dvh;overflow-y:auto;
+    padding-bottom:calc(env(safe-area-inset-bottom) + 20px)
+  }
+  .sheet h2{font-size:18px;font-weight:800;margin:0 0 14px}
+  .grid100{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+  .grid100 button{aspect-ratio:1;border-radius:7px;background:var(--surface2);font-size:11.5px;font-weight:700;color:var(--ink3)}
+  .grid100 button.on{background:var(--ink);color:var(--bg)}
+  .wkspec{font-size:13px;color:var(--ink2);margin-top:2px}
+  .toast{
+    position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translateX(-50%);
+    background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:14px;font-weight:600;z-index:80;
+    white-space:nowrap
+  }
+</style>
+
+<div id="app">
+  <main id="view"></main>
+  <nav id="tabbar"></nav>
+</div>
+<div id="session" hidden></div>
+<div id="modal" hidden></div>
+
+<script>
+"use strict";
+/* ================= data ================= */
+const SEED = [{"n":0,"code":"OO","p":"Olive Oyl","a":"zwaait met een koekenpan","o":"koekenpan"},{"n":1,"code":"OA","p":"Aladdin","a":"vliegt op een tapijt","o":"wonderlamp"},{"n":2,"code":"OB","p":"Obi-Wan Kenobi","a":"zwaait met een lightsaber","o":"lightsaber"},{"n":3,"code":"OC","p":"Cleopatra","a":"baadt in ezelinnenmelk","o":"gouden slang"},{"n":4,"code":"OD","p":"Odin","a":"werpt een speer","o":"raaf"},{"n":5,"code":"OE","p":"Elsa (Frozen)","a":"bevriest alles met haar handen","o":"ijskasteel"},{"n":6,"code":"OS","p":"Santa Claus","a":"glijdt door de schoorsteen","o":"zak met cadeaus"},{"n":7,"code":"OG","p":"James Bond","a":"schiet met een pistool","o":"martini"},{"n":8,"code":"OH","p":"Oliver Hardy","a":"trekt aan zijn stropdas","o":"bolhoed"},{"n":9,"code":"OM","p":"Mary Poppins","a":"zweeft aan een paraplu","o":"paraplu"},{"n":10,"code":"AO","p":"Asterix","a":"drinkt toverdrank","o":"toverdrankfles"},{"n":11,"code":"AA","p":"Andre Agassi","a":"slaat een tennisbal","o":"tennisracket"},{"n":12,"code":"AB","p":"Antonio Banderas (Zorro)","a":"kerft een Z","o":"degen"},{"n":13,"code":"AC","p":"Al Capone","a":"telt bankbiljetten","o":"gangsterhoed"},{"n":14,"code":"AD","p":"Charlie Chaplin","a":"draait met zijn wandelstok","o":"wandelstok"},{"n":15,"code":"AE","p":"Albert Einstein","a":"schrijft op een schoolbord","o":"krijtje"},{"n":16,"code":"AS","p":"Arnold Schwarzenegger","a":"tilt een zware halter","o":"halter"},{"n":17,"code":"AG","p":"Angelina Jolie","a":"schiet met twee pistolen","o":"dolk"},{"n":18,"code":"AH","p":"Neil Armstrong","a":"plant een vlag op de maan","o":"astronautenhelm"},{"n":19,"code":"AM","p":"Amy Winehouse","a":"zingt met beehive-kapsel","o":"microfoon"},{"n":20,"code":"BO","p":"Barack Obama","a":"houdt een toespraak","o":"spreekgestoelte"},{"n":21,"code":"BA","p":"Mr. Bean","a":"zwaait onhandig","o":"teddybeer"},{"n":22,"code":"BB","p":"Bugs Bunny","a":"knabbelt aan een wortel","o":"wortel"},{"n":23,"code":"BC","p":"Michael Jordan","a":"dunkt een basketbal","o":"basketbal"},{"n":24,"code":"BD","p":"Boris Becker","a":"duikt naar een volley","o":"tennisbal"},{"n":25,"code":"BE","p":"Britney Spears","a":"danst met een python","o":"python"},{"n":26,"code":"BS","p":"Bart Simpson","a":"schrijft strafregels op het bord","o":"skateboard"},{"n":27,"code":"BG","p":"Bill Gates","a":"typt op een laptop","o":"diskette"},{"n":28,"code":"BH","p":"Usain Bolt","a":"sprint over de finish","o":"gouden spikes"},{"n":29,"code":"BM","p":"Bob Marley","a":"schudt zijn dreadlocks","o":"gitaar"},{"n":30,"code":"CO","p":"Coco Chanel","a":"spuit parfum","o":"parfumflesje"},{"n":31,"code":"CA","p":"Captain America","a":"werpt zijn schild","o":"schild"},{"n":32,"code":"CB","p":"Batman","a":"schiet een enterhaak af","o":"batarang"},{"n":33,"code":"CC","p":"Céline Dion","a":"slaat op haar hart","o":"reddingsboei"},{"n":34,"code":"CD","p":"Cameron Diaz","a":"doet een sexy loopje","o":"groen masker"},{"n":35,"code":"CE","p":"Clint Eastwood","a":"tuurt met samengeknepen ogen","o":"revolver"},{"n":36,"code":"CS","p":"Chewbacca","a":"brult","o":"kruisboog"},{"n":37,"code":"CG","p":"Che Guevara","a":"steekt zijn vuist op","o":"baret"},{"n":38,"code":"CH","p":"Thor","a":"slingert zijn hamer","o":"hamer Mjölnir"},{"n":39,"code":"CM","p":"Conor McGregor","a":"doet zijn patserloopje","o":"kampioensgordel"},{"n":40,"code":"DO","p":"Donkey Kong","a":"gooit tonnen","o":"houten ton"},{"n":41,"code":"DA","p":"Charles Darwin","a":"bestudeert een vink","o":"reuzenschildpad"},{"n":42,"code":"DB","p":"David Beckham","a":"krult een vrije trap","o":"voetbal"},{"n":43,"code":"DC","p":"David Copperfield","a":"laat een assistent zweven","o":"goochelhoed"},{"n":44,"code":"DD","p":"Donald Duck","a":"stampvoet van woede","o":"matrozenpet"},{"n":45,"code":"DE","p":"Jack Sparrow","a":"wankelt dronken","o":"kompas"},{"n":46,"code":"DS","p":"Doctor Strange","a":"opent een portaal","o":"vliegende cape"},{"n":47,"code":"DG","p":"Dracula","a":"bijt in een nek","o":"doodskist"},{"n":48,"code":"DH","p":"Dumbledore","a":"aait zijn feniks","o":"toverstok"},{"n":49,"code":"DM","p":"Demi Moore","a":"draait aan een pottenbakkersschijf","o":"klomp klei"},{"n":50,"code":"EO","p":"50 Cent","a":"rapt","o":"dikke gouden ketting"},{"n":51,"code":"EA","p":"E.T.","a":"wijst met een lichtgevende vinger","o":"vliegende fiets"},{"n":52,"code":"EB","p":"Ed Sheeran","a":"speelt gitaar","o":"loop-pedaal"},{"n":53,"code":"EC","p":"Elton John","a":"speelt piano","o":"enorme bril"},{"n":54,"code":"ED","p":"Ellen DeGeneres","a":"zwemt als Dory","o":"blauwe vis"},{"n":55,"code":"EE","p":"Elvis Presley","a":"schudt met zijn heupen","o":"glitterpak"},{"n":56,"code":"ES","p":"Edward Snowden","a":"verstopt een usb-stick","o":"usb-stick"},{"n":57,"code":"EG","p":"Hermelien (Hermione)","a":"zwaait met haar toverstok","o":"tijdverdraaier"},{"n":58,"code":"EH","p":"Ethan Hunt","a":"hangt aan een kabel","o":"latex masker"},{"n":59,"code":"EM","p":"Elon Musk","a":"lanceert een raket","o":"vlammenwerper"},{"n":60,"code":"SO","p":"Shaquille O'Neal","a":"verbrijzelt de basketbalring","o":"basketbalring"},{"n":61,"code":"SA","p":"Serena Williams","a":"smasht keihard","o":"grand-slam-beker"},{"n":62,"code":"SB","p":"Salt Bae","a":"strooit zout over zijn onderarm","o":"zoutvaatje"},{"n":63,"code":"SC","p":"Sneeuwwitje","a":"bijt in een appel","o":"giftige appel"},{"n":64,"code":"SD","p":"Scooby-Doo","a":"verslindt een sandwich","o":"hondenkoekje"},{"n":65,"code":"SE","p":"Spider-Man","a":"schiet een web","o":"spinnenweb"},{"n":66,"code":"SS","p":"Rambo","a":"spant zijn boog","o":"machinegeweer"},{"n":67,"code":"SG","p":"Shrek","a":"pelt een ui in laagjes","o":"ui"},{"n":68,"code":"SH","p":"Sherlock Holmes","a":"tuurt door een vergrootglas","o":"pijp"},{"n":69,"code":"SM","p":"Superman","a":"vliegt steil omhoog","o":"rode cape"},{"n":70,"code":"GO","p":"Gandalf","a":"slaat zijn staf op de grond","o":"staf"},{"n":71,"code":"GA","p":"Lady Gaga","a":"paradeert over de rode loper","o":"vleesjurk"},{"n":72,"code":"GB","p":"Goofy","a":"struikelt over zijn eigen voeten","o":"gedeukte hoed"},{"n":73,"code":"GC","p":"George Clooney","a":"drinkt een espresso","o":"espressokopje"},{"n":74,"code":"GD","p":"Gordon Ramsay","a":"schreeuwt naar een kok","o":"koksmes"},{"n":75,"code":"GE","p":"Greta Thunberg","a":"protesteert","o":"protestbord"},{"n":76,"code":"GS","p":"Garfield","a":"schrokt lasagne naar binnen","o":"lasagneschaal"},{"n":77,"code":"GG","p":"Wonder Woman","a":"slingert haar lasso","o":"gouden lasso"},{"n":78,"code":"GH","p":"Genghis Khan","a":"galoppeert over de steppe","o":"kromzwaard"},{"n":79,"code":"GM","p":"Gollum","a":"fluistert tegen de ring","o":"de Ene Ring"},{"n":80,"code":"HO","p":"Frodo","a":"draagt de ring naar de vulkaan","o":"elvenzwaard"},{"n":81,"code":"HA","p":"Harry Potter","a":"vliegt op een bezemsteel","o":"gouden snaai"},{"n":82,"code":"HB","p":"Halle Berry","a":"sluipt in catsuit","o":"kattenmasker"},{"n":83,"code":"HC","p":"Hannibal Lecter","a":"likt zijn lippen","o":"muilkorfmasker"},{"n":84,"code":"HD","p":"Homer Simpson","a":"eet een donut","o":"roze donut"},{"n":85,"code":"HE","p":"He-Man","a":"heft zijn zwaard","o":"krachtzwaard"},{"n":86,"code":"HS","p":"Hercules","a":"worstelt met een leeuw","o":"knots"},{"n":87,"code":"HG","p":"Hugh Grant","a":"stottert verlegen","o":"bos bloemen"},{"n":88,"code":"HH","p":"Hulk Hogan","a":"scheurt zijn shirt open","o":"bandana"},{"n":89,"code":"HM","p":"de Koningin","a":"zwaait met een handschoen","o":"kroon"},{"n":90,"code":"MO","p":"Mona Lisa","a":"glimlacht mysterieus","o":"schilderijlijst"},{"n":91,"code":"MA","p":"Muhammad Ali","a":"danst om zijn tegenstander","o":"bokshandschoenen"},{"n":92,"code":"MB","p":"Madonna","a":"zingt met headset","o":"puntbeha"},{"n":93,"code":"MC","p":"Magnus Carlsen","a":"zet schaakmat","o":"schaakbord"},{"n":94,"code":"MD","p":"Nelson Mandela","a":"heft zijn vuist","o":"regenboogvlag"},{"n":95,"code":"ME","p":"Freddie Mercury","a":"pompt zijn vuist in de lucht","o":"microfoonstandaard"},{"n":96,"code":"MS","p":"Meryl Streep","a":"heft een Oscar","o":"oscarbeeldje"},{"n":97,"code":"MG","p":"Mahatma Gandhi","a":"spint aan een spinnewiel","o":"spinnewiel"},{"n":98,"code":"MH","p":"Michael Jackson","a":"moonwalkt","o":"witte glitterhandschoen"},{"n":99,"code":"MM","p":"Marilyn Monroe","a":"houdt haar wapperende jurk omlaag","o":"witte jurk"}];
+
+/* ================= storage ================= */
+const LS = {
+  get(k, fb){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb }catch(e){ return fb } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} }
+};
+let LIST = LS.get('paoList', null);
+if(!LIST || !Array.isArray(LIST) || LIST.length !== 100){
+  LIST = SEED.map(d => ({...d, excluded:false, editP:0, editA:0, editO:0}));
+  LS.set('paoList', LIST);
+}
+let LOG = LS.get('paoLog', []);
+let WORKOUTS = LS.get('paoWorkouts', []);
+let SRS = LS.get('paoSrs', {});
+let SET = Object.assign({theme:'auto', audio:false, lang:'nl', qLen:2, qDir:'pao', qTimer:0, qTempo:0, seqLevel:6, syncOn:false, syncCode:'', lastSync:null, syncDirty:false}, LS.get('paoSettings', {}));
+let CARDS = LS.get('paoCards', null);
+if(!CARDS || !Array.isArray(CARDS) || CARDS.length !== 52){
+  CARDS = Array.from({length:52}, (_, c) => ({c, p:'', a:'', o:'', excluded:false, editP:0, editA:0, editO:0}));
+  LS.set('paoCards', CARDS);
+}
+function saveCards(){ LS.set('paoCards', CARDS); markDirty() }
+
+function saveList(){ LS.set('paoList', LIST); markDirty() }
+function saveLog(){ if(LOG.length > 6000) LOG = LOG.slice(LOG.length - 6000); LS.set('paoLog', LOG); markDirty() }
+function saveWk(){ LS.set('paoWorkouts', WORKOUTS); markDirty() }
+function saveSrs(){ LS.set('paoSrs', SRS); markDirty() }
+function saveSet(){ LS.set('paoSettings', SET) }
+
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const pad2 = n => String(n).padStart(2, '0');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tr = (nl, en) => SET.lang === 'en' ? en : nl;
+const tx = v => (v && typeof v === 'object' && !Array.isArray(v)) ? (v[SET.lang] || v.nl) : v;
+const ELS = ['p','a','o'];
+const ELNAME = {p:{nl:'Persoon',en:'Person'}, a:{nl:'Actie',en:'Action'}, o:{nl:'Object',en:'Object'}};
+const elName = el => tx(ELNAME[el]);
+const DIRS = [
+  ['pao',{nl:'Getal → P·A·O',en:'Number → P·A·O'}], ['p',{nl:'Getal → Persoon',en:'Number → Person'}],
+  ['a',{nl:'Getal → Actie',en:'Number → Action'}], ['o',{nl:'Getal → Object',en:'Number → Object'}],
+  ['rp',{nl:'Persoon → Getal',en:'Person → Number'}], ['ra',{nl:'Actie → Getal',en:'Action → Number'}],
+  ['ro',{nl:'Object → Getal',en:'Object → Number'}], ['mix',{nl:'Mix van richtingen',en:'Mix of directions'}]
+];
+const dirLabel = d => tx((DIRS.find(x => x[0] === d) || ['', '?'])[1]);
+
+/* ---------- kaarten ---------- */
+const SUITS = [
+  {sym:'♠', red:false, nl:'schoppen', en:'of spades'},
+  {sym:'♥', red:true,  nl:'harten',   en:'of hearts'},
+  {sym:'♦', red:true,  nl:'ruiten',   en:'of diamonds'},
+  {sym:'♣', red:false, nl:'klaveren', en:'of clubs'}
+];
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RANK_NAMES = {
+  nl:['aas','twee','drie','vier','vijf','zes','zeven','acht','negen','tien','boer','vrouw','heer'],
+  en:['ace','two','three','four','five','six','seven','eight','nine','ten','jack','queen','king']
+};
+const isCard = n => n >= 100;
+function cardMeta(n){
+  const c = n - 100, s = Math.floor(c / 13), r = c % 13;
+  return {s, r, sym:SUITS[s].sym, red:SUITS[s].red, label:RANKS[r] + SUITS[s].sym};
+}
+function cardName(n){
+  const m = cardMeta(n);
+  return SET.lang === 'en' ? RANK_NAMES.en[m.r] + ' ' + SUITS[m.s].en : SUITS[m.s].nl + ' ' + RANK_NAMES.nl[m.r];
+}
+const entryFor = n => isCard(n) ? CARDS[n - 100] : LIST[n];
+const dispNum = n => isCard(n) ? cardMeta(n).label : pad2(n);
+const speakNum = n => isCard(n) ? cardName(n) : pad2(n);
+function fmtClock(ms){
+  const s = Math.max(0, Math.round(ms/1000));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return (h ? h + ':' + String(m).padStart(2,'0') : m) + ':' + String(ss).padStart(2,'0');
+}
+function applyTheme(){
+  if(SET.theme === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = SET.theme;
+}
+let toastTimer = null;
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 2200);
+}
+function speak(txt){
+  if(!SET.audio || !('speechSynthesis' in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt);
+    u.lang = 'nl-NL'; u.rate = 1.02;
+    const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith('nl'));
+    if(v) u.voice = v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ================= cloud-sync ================= */
+const CLOUD_URL = 'https://ramacor.github.io/pao-trainer/';
+const SYNC_URL = 'https://ckhwukostjsutnihzudi.supabase.co/functions/v1/pao/state';
+let syncTimer = null, syncBusy = false, SYNCAPPLYING = false;
+function markDirty(){
+  if(SYNCAPPLYING || !SET.syncOn || !SET.syncCode) return;
+  if(!SET.syncDirty){ SET.syncDirty = true; saveSet() }
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncPush(), 6000);
+}
+function syncPayload(){ return {v:1, list:LIST, cards:CARDS, log:LOG, workouts:WORKOUTS, srs:SRS, seq:seqHist()} }
+async function syncReq(method, body){
+  const r = await fetch(SYNC_URL, {
+    method,
+    headers:{'content-type':'application/json', 'x-sync-code':(SET.syncCode || '').toUpperCase()},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if(!r.ok) throw new Error('http ' + r.status);
+  return r.json();
+}
+async function syncPush(){
+  if(!SET.syncOn || !SET.syncCode || syncBusy) return;
+  syncBusy = true;
+  try{
+    const d = await syncReq('PUT', {payload: syncPayload()});
+    SET.lastSync = d.updated_at; SET.syncDirty = false; saveSet();
+    syncStatus();
+  }catch(e){ syncStatus(tr('sync mislukt — komt later goed', 'sync failed — will retry later')) }
+  syncBusy = false;
+}
+async function syncPull(interactive){
+  if(!SET.syncOn || !SET.syncCode || syncBusy) return;
+  syncBusy = true;
+  try{
+    const d = await syncReq('GET');
+    if(d && d.payload && new Date(d.updated_at).getTime() !== new Date(SET.lastSync || 0).getTime()){
+      applySyncPayload(d.payload);
+      SET.lastSync = d.updated_at; SET.syncDirty = false; saveSet();
+      render();
+      if(interactive) toast(tr('Gegevens opgehaald uit de cloud', 'Data pulled from the cloud'));
+    } else if(SET.syncDirty){
+      syncBusy = false; await syncPush(); return;
+    } else if(interactive) toast(tr('Alles is al gelijk', 'Everything already in sync'));
+    syncStatus();
+  }catch(e){ if(interactive) toast(tr('Sync niet bereikbaar', 'Sync unreachable')) }
+  syncBusy = false;
+}
+function applySyncPayload(p){
+  SYNCAPPLYING = true;
+  try{
+    if(Array.isArray(p.list) && p.list.length === 100){ LIST = p.list; LS.set('paoList', LIST) }
+    if(Array.isArray(p.cards) && p.cards.length === 52){ CARDS = p.cards; LS.set('paoCards', CARDS) }
+    if(Array.isArray(p.log)){ LOG = p.log; LS.set('paoLog', LOG) }
+    if(Array.isArray(p.workouts)){ WORKOUTS = p.workouts; LS.set('paoWorkouts', WORKOUTS) }
+    if(p.srs && typeof p.srs === 'object'){ SRS = p.srs; LS.set('paoSrs', SRS) }
+    if(Array.isArray(p.seq)) LS.set('paoSeq', p.seq);
+  } finally { SYNCAPPLYING = false }
+}
+function genSyncCode(){
+  const alpha = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const buf = new Uint8Array(12); crypto.getRandomValues(buf);
+  const s = [...buf].map(b => alpha[b % alpha.length]).join('');
+  return 'PAO-' + s.slice(0,4) + '-' + s.slice(4,8) + '-' + s.slice(8,12);
+}
+function syncStatus(msg){
+  const el = $('#sync-status');
+  if(el) el.textContent = msg || (SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL') : '');
+}
+function cloudOnlyModal(){
+  openModal(`
+    <h2>${tr('Open de cloud-versie', 'Open the cloud version')}</h2>
+    <div class="stack">
+      <div class="hint" style="line-height:1.5">${tr('Cloud-sync werkt niet in deze omgeving (netwerk geblokkeerd). Open de app via de cloud-link hieronder en zet daar de sync aan — dat wordt je nieuwe vaste plek. Neem je gegevens mee via Inzicht → Backup maken, en zet ze daar terug.', 'Cloud sync does not work in this environment (network blocked). Open the app via the cloud link below and enable sync there — that becomes your new home. Take your data along via Insights → Create backup, and restore it there.')}</div>
+      <textarea class="field" id="cloud-url" rows="2" readonly style="font-size:13px">${CLOUD_URL}</textarea>
+      <button class="btn" data-act="cloud-copy">${tr('Kopieer link', 'Copy link')}</button>
+      <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
+    </div>`);
+}
+
+/* ================= afbeeldingen (IndexedDB) ================= */
+const IMGURL = new Map();
+let IDB = null;
+function idbOpen(){
+  return new Promise(res => {
+    if(!('indexedDB' in window)) return res(null);
+    try{
+      const r = indexedDB.open('paoImg', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('img');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => res(null);
+    }catch(e){ res(null) }
+  });
+}
+function idbReq(mode, fn){
+  return new Promise((res, rej) => {
+    if(!IDB) return rej(new Error('geen opslag'));
+    const rq = fn(IDB.transaction('img', mode).objectStore('img'));
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function setImgUrl(n, blob){
+  const old = IMGURL.get(n); if(old) URL.revokeObjectURL(old);
+  IMGURL.set(n, URL.createObjectURL(blob));
+}
+async function imgSet(n, blob){ await idbReq('readwrite', s => s.put(blob, n)); setImgUrl(n, blob) }
+async function imgDel(n){
+  await idbReq('readwrite', s => s.delete(n));
+  const u = IMGURL.get(n); if(u) URL.revokeObjectURL(u);
+  IMGURL.delete(n);
+}
+async function imgLoadAll(){
+  IDB = await idbOpen();
+  if(!IDB) return;
+  try{
+    const keys = await idbReq('readonly', s => s.getAllKeys());
+    for(const k of keys){ const b = await idbReq('readonly', s => s.get(k)); if(b) setImgUrl(k, b) }
+  }catch(e){}
+}
+async function resizeImage(file, max = 600){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url });
+    const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * sc));
+    c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.75));
+    if(!blob) throw new Error('resize mislukt');
+    return blob;
+  } finally { URL.revokeObjectURL(url) }
+}
+function dataURLtoBlob(du){
+  const [h, b64] = du.split(',');
+  const mime = (h.match(/data:(.*?)[;,]/) || [0, 'image/jpeg'])[1];
+  const bin = atob(b64); const arr = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], {type:mime});
+}
+
+/* ================= stats model ================= */
+function editTs(n, el){ const e = entryFor(n); if(!e) return 0; return el === 'p' ? (e.editP||0) : el === 'a' ? (e.editA||0) : (e.editO||0) }
+function buildStats(){
+  const map = {}; // "n:el" -> {att:[{ms,ok,ts}], fails, oks}
+  for(const x of LOG){
+    if(x.ts <= editTs(x.n, x.el)) continue;
+    const k = x.n + ':' + x.el;
+    (map[k] = map[k] || []).push(x);
+  }
+  const okMs = [];
+  for(const k in map){
+    map[k] = map[k].slice(-12);
+    for(const x of map[k]) if(x.ok) okMs.push(x.ms);
+  }
+  okMs.sort((a,b) => a-b);
+  const gmed = Math.max(700, okMs.length ? okMs[Math.floor(okMs.length/2)] : 1500);
+  return {map, gmed};
+}
+function elemStrength(st, n, el){
+  const att = st.map[n + ':' + el];
+  if(!att || !att.length) return null;
+  let wsum = 0, oksum = 0, w = 1;
+  for(let i = att.length - 1; i >= 0; i--){ oksum += (att[i].ok ? 1 : 0) * w; wsum += w; w *= 0.85 }
+  const okRate = oksum / wsum;
+  const okTimes = att.filter(x => x.ok).map(x => x.ms).sort((a,b) => a-b);
+  let speed = 0;
+  if(okTimes.length){
+    const med = okTimes[Math.floor(okTimes.length/2)];
+    speed = Math.max(0, Math.min(1, 1 - (med/st.gmed - 1) / 1.2));
+  }
+  return okRate * 0.65 + speed * 0.35;
+}
+function numStrength(st, n){
+  const v = ELS.map(el => elemStrength(st, n, el)).filter(x => x !== null);
+  return v.length ? v.reduce((a,b) => a+b, 0) / v.length : null;
+}
+function attemptsCount(st, n, el){ const a = st.map[n + ':' + el]; return a ? a.length : 0 }
+function bucket(s){ return s === null ? -1 : s < 0.35 ? 0 : s < 0.5 ? 1 : s < 0.65 ? 2 : s < 0.8 ? 3 : 4 }
+function clinicFlags(st){
+  const out = [];
+  const check = n => {
+    const e = entryFor(n);
+    if(!e || e.excluded || !e.p) return;
+    for(const el of ELS){
+      const c = attemptsCount(st, n, el);
+      const s = elemStrength(st, n, el);
+      if(c >= 6 && s !== null && s < 0.45) out.push({n, el, s, c});
+    }
+  };
+  for(let n = 0; n < 100; n++) check(n);
+  for(let c = 0; c < 52; c++) check(100 + c);
+  return out.sort((a,b) => a.s - b.s);
+}
+function dueNumbers(){
+  const now = Date.now(); const set = new Set();
+  for(const k in SRS){
+    const num = +k.split(':')[0];
+    const e = entryFor(num);
+    if(!e || e.excluded) continue;
+    if(SRS[k].due <= now) set.add(num);
+  }
+  return set;
+}
+function srsUpdate(n, el, ok){
+  const k = n + ':' + el;
+  const e = SRS[k] || {streak:0, due:0};
+  if(ok){
+    e.streak = Math.min(e.streak + 1, 12);
+    e.due = Date.now() + 12*3600e3 * Math.pow(1.5, e.streak - 1);
+  } else {
+    e.streak = 0;
+    e.due = Date.now() + 5*60e3;
+  }
+  SRS[k] = e;
+}
+
+/* recommendation: easy-first mix */
+function recommendation(){
+  const st = buildStats();
+  const seen = [], unseen = [];
+  for(let n = 0; n < 100; n++){
+    if(LIST[n].excluded) continue;
+    const s = numStrength(st, n);
+    if(s === null) unseen.push(n); else seen.push({n, s});
+  }
+  if(!seen.length) return null;
+  const weak = seen.filter(x => x.s < 0.55).sort((a,b) => b.s - a.s);
+  const mid  = seen.filter(x => x.s >= 0.55 && x.s < 0.85).sort((a,b) => b.s - a.s);
+  const nums = [];
+  for(const x of mid.slice(0, 8)) nums.push(x.n);
+  for(const x of weak.slice(0, 4)) nums.push(x.n);
+  let nNew = 0;
+  while(nums.length < 12 && nNew < unseen.length && nNew < 2){ nums.push(unseen[nNew]); nNew++ }
+  if(nums.length < 4) for(const x of seen.sort((a,b) => b.s - a.s)){ if(!nums.includes(x.n)) nums.push(x.n); if(nums.length >= 8) break }
+  // weakest element overall decides direction
+  let dir = 'pao', worst = 2;
+  for(const el of ELS){
+    const vals = [];
+    for(const x of seen){ const s = elemStrength(st, x.n, el); if(s !== null) vals.push(s) }
+    if(vals.length >= 5){
+      const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
+      if(avg < worst){ worst = avg; dir = el }
+    }
+  }
+  return {nums:[...new Set(nums)], dir, nMid:Math.min(mid.length,8), nWeak:Math.min(weak.length,4), nNew};
+}
+
+/* ================= session engine ================= */
+const BUILTIN = [
+  {id:'all', name:'Alle nummers', mode:'all', len:2, dir:'pao', smart:false},
+  {id:'mirror', name:'Spiegelparen', mode:'mirror', len:2, dir:'pao', smart:false},
+  {id:'delayed', name:'Uitgesteld terughalen', mode:'all', len:2, dir:'pao', smart:true, delayed:true},
+  {id:'cards', name:'Kaarten', mode:'cards', len:2, dir:'pao', smart:false}
+];
+function builtinName(w){
+  const names = {all:{nl:'Alle nummers',en:'All numbers'}, mirror:{nl:'Spiegelparen',en:'Mirror pairs'},
+    delayed:{nl:'Uitgesteld terughalen',en:'Delayed recall'}, cards:{nl:'Kaarten',en:'Cards'}};
+  return names[w.id] ? tx(names[w.id]) : w.name;
+}
+function poolFor(w){
+  if(w.mode === 'cards') return CARDS.filter(c => !c.excluded && c.p.trim()).map(c => 100 + c.c);
+  let pool = LIST.filter(e => !e.excluded).map(e => e.n);
+  if(w.mode === 'range') pool = pool.filter(n => n >= (w.from ?? 0) && n <= (w.to ?? 99));
+  else if(w.mode === 'first') pool = pool.filter(n => Math.floor(n/10) === w.digit);
+  else if(w.mode === 'last') pool = pool.filter(n => n % 10 === w.digit);
+  else if(w.mode === 'manual') return (w.sel || []).filter(n => { const e = entryFor(n); return e && !e.excluded && (!isCard(n) || e.p.trim()) });
+  else if(w.mode === 'mirror') pool = pool.filter(n => Math.floor(n/10) !== n % 10);
+  return pool;
+}
+let S = null; // active session
+function pickWeighted(pool, st, due){
+  if(!S.w.smart) return pool[Math.floor(Math.random() * pool.length)];
+  let total = 0; const ws = pool.map(n => {
+    const s = numStrength(st, n);
+    let w = 1 + (s === null ? 0.4 : (1 - s) * 2.5) + (due.has(n) ? 1.5 : 0);
+    total += w; return w;
+  });
+  let r = Math.random() * total;
+  for(let i = 0; i < pool.length; i++){ r -= ws[i]; if(r <= 0) return pool[i] }
+  return pool[pool.length - 1];
+}
+function genItem(){
+  const st = S.st, due = S.due, w = S.w;
+  const count = w.len / 2;
+  if(w.mode === 'mirror' && S.pendingMirror !== null && S.pendingMirror !== undefined){
+    const n = S.pendingMirror; S.pendingMirror = null;
+    return {nums:[n], dir:resolveDir(w.dir)};
+  }
+  const nums = [];
+  let guard = 0;
+  while(nums.length < count && guard++ < 200){
+    const n = pickWeighted(S.pool, st, due);
+    if(!nums.includes(n) && !(count === 1 && S.lastKey === String(n) && S.pool.length > 1)) nums.push(n);
+  }
+  while(nums.length < count) nums.push(S.pool[Math.floor(Math.random() * S.pool.length)]);
+  if(w.mode === 'mirror'){
+    const n = nums[0];
+    const rev = (n % 10) * 10 + Math.floor(n / 10);
+    if(S.pool.includes(rev) && Math.random() < 0.85) S.pendingMirror = rev;
+  }
+  return {nums, dir:resolveDir(w.dir)};
+}
+function resolveDir(d){
+  if(d !== 'mix') return d;
+  const opts = ['pao','p','a','o','rp','ra','ro'];
+  return opts[Math.floor(Math.random() * opts.length)];
+}
+function startSession(w){
+  const pool = poolFor(w);
+  if(!pool.length){ toast(w.mode === 'cards' ? tr('Vul eerst kaartbeelden in via de Bibliotheek', 'Fill in card images first via the Library') : tr('Geen nummers in deze selectie', 'No numbers in this selection')); return }
+  if(w.len > 2 && pool.length < w.len/2){ toast(tr('Te weinig nummers voor deze lengte', 'Not enough items for this length')); return }
+  if(w.delayed && pool.length < 3){ toast(tr('Te weinig nummers voor deze modus', 'Not enough items for this mode')); return }
+  S = {
+    w, pool, st:buildStats(), due:dueNumbers(),
+    attempts:[], i:0, state:'q', item:null, t0:0,
+    pendingMirror:null, lastKey:'',
+    startedAt:Date.now(), limitMs:(w.limit || 0) * 60e3, clock:null,
+    tempoMs:(w.delayed ? 0 : (w.tempo || 0) * 1000), tempoTimer:null,
+    batch:null, phase:null, encIdx:0, quizIdx:0, order:null
+  };
+  S.clock = setInterval(() => {
+    if(!S) return;
+    const ms = Date.now() - S.startedAt;
+    if(S.limitMs && ms >= S.limitMs){ toast(tr('Tijd om!', "Time's up!")); endSession(); return }
+    const el = $('#sess-timer');
+    if(el) el.textContent = sessClockText();
+  }, 500);
+  $('#session').hidden = false;
+  nextItem();
+}
+function sessClockText(){
+  const ms = Date.now() - S.startedAt;
+  return S.i + ' · ' + fmtClock(S.limitMs ? S.limitMs - ms : ms);
+}
+function nextItem(){
+  clearTempo();
+  if(S.w.delayed){ nextDelayed(); return }
+  S.item = genItem();
+  S.lastKey = S.item.nums.join(',');
+  S.state = 'q'; S.i++;
+  renderSession();
+  S.t0 = performance.now();
+  if(S.tempoMs) S.tempoTimer = setTimeout(tempoExpire, S.tempoMs);
+  if(SET.audio){
+    const it = S.item;
+    if(it.dir.startsWith('r')) speak(entryFor(it.nums[0])[it.dir[1]]);
+    else speak(it.nums.map(speakNum).join('. '));
+  }
+}
+function nextDelayed(){
+  if(!S.batch || (S.phase === 'quiz' && S.quizIdx >= S.order.length)){
+    S.batch = [];
+    const want = Math.min(5, S.pool.length);
+    let guard = 0;
+    while(S.batch.length < want && guard++ < 200){
+      const n = pickWeighted(S.pool, S.st, S.due);
+      if(!S.batch.includes(n)) S.batch.push(n);
+    }
+    S.phase = 'enc'; S.encIdx = 0; S.quizIdx = 0; S.order = null;
+  }
+  if(S.phase === 'enc' && S.encIdx < S.batch.length){
+    S.item = {nums:[S.batch[S.encIdx]], dir:'pao'};
+    S.encIdx++; S.i++;
+    S.state = 'enc';
+    renderSession();
+    S.t0 = performance.now();
+    if(SET.audio) speak(pad2(S.item.nums[0]));
+    return;
+  }
+  if(S.phase === 'enc'){
+    S.phase = 'quiz';
+    S.order = S.batch.slice().sort(() => Math.random() - 0.5);
+  }
+  S.item = {nums:[S.order[S.quizIdx]], dir:'pao'};
+  S.quizIdx++;
+  S.state = 'q'; S.i++;
+  renderSession();
+  S.t0 = performance.now();
+  if(SET.audio) speak(pad2(S.item.nums[0]));
+}
+function elemsForItem(it){
+  // which (number, element) pairs does this prompt test?
+  if(it.dir === 'pao'){
+    if(it.nums.length === 1) return ELS.map(el => [it.nums[0], el]);
+    if(it.nums.length === 2) return [[it.nums[0],'p'], [it.nums[1],'a']];
+    return [[it.nums[0],'p'], [it.nums[1],'a'], [it.nums[2],'o']];
+  }
+  if(it.dir.startsWith('r')) return [[it.nums[0], it.dir[1]]];
+  return [[it.nums[0], it.dir]];
+}
+function logItem(ok, ms){
+  const ts = Date.now();
+  for(const [n, el] of elemsForItem(S.item)){
+    LOG.push({ts, n, el, dir:S.item.dir, len:S.w.len, ms:Math.round(ms), ok});
+    srsUpdate(n, el, ok);
+  }
+  S.attempts.push({nums:S.item.nums.slice(), dir:S.item.dir, ms:Math.round(ms), ok});
+  saveLog(); saveSrs();
+}
+function answerHtml(it){
+  const rows = [];
+  const row = (el, n, showNum) => {
+    const e = entryFor(n);
+    return `<div class="el ${el} fade">${showNum ? `<span class="pairnum numfont">${dispNum(n)}</span>` : ''}<span class="tag">${el.toUpperCase()}</span><span class="txt">${esc(e[el])}</span></div>`;
+  };
+  if(it.dir.startsWith('r')) return `<div class="ansnum numfont fade" ${isCard(it.nums[0]) && cardMeta(it.nums[0]).red ? 'style="color:var(--bad-ink)"' : ''}>${dispNum(it.nums[0])}</div>`;
+  if(it.dir === 'pao'){
+    const multi = it.nums.length > 1;
+    if(it.nums.length === 1){ rows.push(row('p', it.nums[0], false), row('a', it.nums[0], false), row('o', it.nums[0], false)) }
+    else if(it.nums.length === 2){ rows.push(row('p', it.nums[0], multi), row('a', it.nums[1], multi)) }
+    else { rows.push(row('p', it.nums[0], multi), row('a', it.nums[1], multi), row('o', it.nums[2], multi)) }
+    return rows.join('');
+  }
+  return row(it.dir, it.nums[0], false);
+}
+function answerSpeech(it){
+  if(it.dir.startsWith('r')) return isCard(it.nums[0]) ? cardName(it.nums[0]) : pad2(it.nums[0]).split('').join(' ');
+  if(it.dir === 'pao'){
+    if(it.nums.length === 1){ const e = entryFor(it.nums[0]); return `${e.p}. ${e.a}. ${e.o}` }
+    if(it.nums.length === 2) return `${entryFor(it.nums[0]).p}. ${entryFor(it.nums[1]).a}`;
+    return `${entryFor(it.nums[0]).p}. ${entryFor(it.nums[1]).a}. ${entryFor(it.nums[2]).o}`;
+  }
+  return entryFor(it.nums[0])[it.dir];
+}
+function renderSession(){
+  const it = S.item;
+  const sess = $('#session');
+  sess.classList.toggle('answering', S.state === 'ans');
+  sess.classList.toggle('encoding', S.state === 'enc');
+  let prompt;
+  if(it.dir.startsWith('r')){
+    prompt = `<div class="bigword">${esc(entryFor(it.nums[0])[it.dir[1]])}</div>`;
+  } else {
+    const cls = it.nums.length === 1 ? 'n2' : it.nums.length === 2 ? 'n4' : 'n6';
+    prompt = `<div class="bignum numfont ${cls}">${it.nums.map(n => `<span ${isCard(n) && cardMeta(n).red ? 'style="color:var(--bad-ink)"' : ''}>${dispNum(n)}</span>`).join('')}</div>`;
+  }
+  const paoLbl = tr('Getal', 'Number');
+  let dl = it.dir === 'pao'
+    ? (it.nums.length === 1 ? `${paoLbl} → P·A·O` : it.nums.length === 2 ? `${paoLbl} → ${elName('p')} · ${elName('a')}` : `${paoLbl} → ${elName('p')} · ${elName('a')} · ${elName('o')}`)
+    : dirLabel(it.dir);
+  if(isCard(it.nums[0]) && it.dir === 'pao') dl = dl.replace(paoLbl, tr('Kaart', 'Card'));
+  if(S.state === 'enc') dl = `${tr('Prent in', 'Memorize')} · ${S.encIdx}/${S.batch.length}`;
+  else if(S.w.delayed) dl = `${tr('Terughalen', 'Recall')} · ${S.quizIdx}/${S.batch.length}`;
+  sess.innerHTML = `
+    <div class="sess-top">
+      <button class="icobtn" data-act="sess-stop" aria-label="Stop training">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <span class="sess-count numfont" id="sess-timer">${sessClockText()}</span>
+      <button class="icobtn ${SET.audio ? 'on' : ''}" data-act="sess-audio" aria-label="Audio aan/uit">
+        <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7"/></svg>
+      </button>
+    </div>
+    <div id="stage">
+      <div class="dirlabel">${dl}</div>
+      ${S.tempoMs ? `<div class="tempobar">${S.state === 'q' ? `<i style="animation-duration:${S.tempoMs}ms"></i>` : ''}</div>` : ''}
+      ${prompt}
+      <div id="answer">${S.state === 'ans' ? (IMGURL.has(it.nums[0]) ? `<img class="ansimg fade" src="${IMGURL.get(it.nums[0])}" alt="">` : '') + answerHtml(it) : ''}</div>
+    </div>
+    <div class="sess-btns">
+      <button id="btn-bad" data-act="sess-bad" aria-label="Vergeten">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <button id="btn-ok" data-act="sess-ok" aria-label="Gekend, volgende">
+        <svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7"/></svg>
+        <span class="cont">${tr('Volgende', 'Next')}</span>
+      </button>
+    </div>`;
+}
+function clearTempo(){ if(S && S.tempoTimer){ clearTimeout(S.tempoTimer); S.tempoTimer = null } }
+function sessGreen(){
+  clearTempo();
+  if(S.state === 'enc'){ nextItem(); return }
+  if(S.state === 'q'){ logItem(true, performance.now() - S.t0); nextItem() }
+  else nextItem();
+}
+function sessRed(){
+  if(S.state !== 'q') return;
+  clearTempo();
+  logItem(false, performance.now() - S.t0);
+  S.state = 'ans';
+  renderSession();
+  if(SET.audio) speak(answerSpeech(S.item));
+  if(S.tempoMs) S.tempoTimer = setTimeout(() => { if(S && S.state === 'ans') nextItem() }, 1700);
+}
+function tempoExpire(){
+  if(!S || S.state !== 'q') return;
+  logItem(false, S.tempoMs);
+  S.state = 'ans';
+  renderSession();
+  if(SET.audio) speak(answerSpeech(S.item));
+  S.tempoTimer = setTimeout(() => { if(S && S.state === 'ans') nextItem() }, 1700);
+}
+function endSession(){
+  if(S && S.clock) clearInterval(S.clock);
+  clearTempo();
+  $('#session').hidden = true;
+  const att = S ? S.attempts : [];
+  const s = S; S = null;
+  if(att.length >= 3) showSummary(s, att);
+  render();
+}
+function showSummary(s, att){
+  // aggregate per displayed number (first number of item for multi-pair)
+  const agg = {};
+  for(const a of att){
+    for(const n of a.nums){
+      const g = agg[n] = agg[n] || {n, ms:[], fails:0, count:0};
+      g.count++; if(a.ok) g.ms.push(a.ms); else g.fails++;
+    }
+  }
+  const rows = Object.values(agg).map(g => ({...g, avg: g.ms.length ? g.ms.reduce((x,y) => x+y,0)/g.ms.length : null}));
+  const greens = rows.filter(r => r.avg !== null && !r.fails).sort((a,b) => a.avg - b.avg);
+  const slows  = rows.filter(r => r.avg !== null).sort((a,b) => b.avg - a.avg);
+  const reds   = rows.filter(r => r.fails > 0).sort((a,b) => b.fails - a.fails);
+  const okCount = att.filter(a => a.ok).length;
+  const avgAll = att.filter(a => a.ok).map(a => a.ms);
+  const avgMs = avgAll.length ? Math.round(avgAll.reduce((x,y) => x+y,0)/avgAll.length) : 0;
+  const focus = [...new Set([...reds.map(r => r.n), ...slows.slice(0,3).map(r => r.n)])].slice(0, 12);
+  const chip = r => `<span class="chip"><span class="numfont">${dispNum(r.n)}</span><span style="font-weight:500;color:var(--ink2)">${esc((entryFor(r.n).p || '').split(' (')[0])}</span></span>`;
+  const timeChip = r => `<span class="chip"><span class="numfont">${dispNum(r.n)}</span><span style="font-weight:500;color:var(--ink2)">${(r.avg/1000).toFixed(1)}s</span></span>`;
+  openModal(`
+    <h2>${tr('Workout klaar', 'Workout done')}</h2>
+    <div class="stack">
+      <div class="row" style="gap:8px">
+        <span class="chip">${att.length} ${tr('beurten', 'turns')}</span>
+        <span class="chip">${Math.round(okCount/att.length*100)}% ${tr('gekend', 'known')}</span>
+        ${avgMs ? `<span class="chip">${tr('gem.', 'avg')} ${(avgMs/1000).toFixed(1)}s</span>` : ''}
+      </div>
+      ${greens.length ? `<div><div class="label" style="margin-bottom:7px">${tr('Snelste', 'Fastest')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${greens.slice(0,5).map(timeChip).join('')}</div></div>` : ''}
+      ${slows.length ? `<div><div class="label" style="margin-bottom:7px">${tr('Langzaamste', 'Slowest')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${slows.slice(0,5).map(timeChip).join('')}</div></div>` : ''}
+      ${reds.length ? `<div><div class="label" style="margin-bottom:7px">${tr('Vergeten', 'Forgotten')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${reds.map(chip).join('')}</div></div>` : ''}
+      ${focus.length ? `
+        <div class="divider"></div>
+        <div class="hint">${tr('Deze nummers verdienen extra aandacht. Train ze nu gericht, of vind ze terug onder Inzicht.', 'These items deserve extra attention. Train them now, or find them under Insights.')}</div>
+        <button class="btn" data-act="train-focus" data-nums="${focus.join(',')}">${tr('Train deze', 'Train these')} ${focus.length} ${tr('nummers', 'items')}</button>` : `<div class="hint">${tr('Sterke sessie — niets vergeten. Blijf herhalen om het vast te houden.', 'Strong session — nothing forgotten. Keep reviewing to make it stick.')}</div>`}
+      <button class="btn quiet" data-act="modal-close">${tr('Klaar', 'Done')}</button>
+    </div>`);
+}
+
+/* ================= reeks-proef ================= */
+let Q = null;
+const SEQ_LEVELS = [6, 12, 18, 24, 36, 48, 60, 80];
+function seqHist(){ return LS.get('paoSeq', []) }
+function startSeq(level){
+  if(!SEQ_LEVELS.includes(level)) level = 6;
+  const pool = LIST.filter(e => !e.excluded).map(e => e.n);
+  if(pool.length < 5){ toast(tr('Te weinig nummers beschikbaar', 'Not enough numbers available')); return }
+  const pairs = [];
+  for(let i = 0; i < level/2; i++){
+    let n, guard = 0;
+    do{ n = pool[Math.floor(Math.random() * pool.length)] } while(guard++ < 50 && pairs.length && n === pairs[pairs.length - 1]);
+    pairs.push(n);
+  }
+  Q = {phase:'mem', pairs, input:[], level, phaseStart:Date.now(), memMs:0, recMs:0, res:null, clock:null};
+  Q.clock = setInterval(() => { const el = $('#seq-timer'); if(el && Q && Q.phase !== 'done') el.textContent = fmtClock(Date.now() - Q.phaseStart) }, 500);
+  $('#session').hidden = false;
+  renderSeq();
+}
+function seqRows(arr){
+  const rows = [];
+  for(let i = 0; i < arr.length; i += 3) rows.push(arr.slice(i, i + 3));
+  return rows;
+}
+function renderSeq(){
+  const sess = $('#session');
+  sess.classList.remove('answering', 'encoding');
+  let body = '', btns = '';
+  if(Q.phase === 'mem'){
+    body = `<div class="dirlabel">${tr('Prent de reeks in', 'Memorize the sequence')}</div>
+      <div class="seqrows">${seqRows(Q.pairs).map(r => `<div class="seqrow numfont">${r.map(n => `<span class="pr">${pad2(n)}</span>`).join('')}</div>`).join('')}</div>
+      <div class="hint">${Q.level} ${tr('cijfers · elke rij is één scène: persoon · actie · object', 'digits · each row is one scene: person · action · object')}</div>`;
+    btns = `<button class="btn" data-act="seq-torecall" style="height:64px;border-radius:18px;font-size:17px">${tr('Klaar — terughalen', 'Done — recall')}</button>`;
+  } else if(Q.phase === 'rec'){
+    const slots = [];
+    for(let i = 0; i < Q.level/2; i++){
+      const d1 = Q.input[i*2], d2 = Q.input[i*2 + 1];
+      slots.push((d1 === undefined && d2 === undefined) ? null : String(d1 ?? '·') + String(d2 ?? '·'));
+    }
+    body = `<div class="dirlabel">${tr('Typ de reeks terug', 'Type the sequence back')}</div>
+      <div class="seqrows">${seqRows(slots).map(r => `<div class="seqrow numfont" style="font-size:clamp(20px,6vw,28px)">${r.map(s => `<span class="pr ${s === null ? 'emp' : ''}">${s === null ? '··' : s}</span>`).join('')}</div>`).join('')}</div>
+      <div class="keypad">
+        ${[1,2,3,4,5,6,7,8,9].map(d => `<button data-act="seq-key" data-k="${d}" class="numfont">${d}</button>`).join('')}
+        <button data-act="seq-key" data-k="back">⌫</button>
+        <button data-act="seq-key" data-k="0" class="numfont">0</button>
+        <button data-act="seq-key" data-k="ok" ${Q.input.length === Q.level ? 'style="color:var(--o)"' : 'disabled'}>OK</button>
+      </div>`;
+  } else {
+    const target = Q.pairs.map(n => pad2(n)).join('');
+    const inp = Q.input.join('');
+    const pairsIn = [];
+    for(let i = 0; i < Q.level/2; i++){
+      const a = inp.slice(i*2, i*2 + 2), b = target.slice(i*2, i*2 + 2);
+      pairsIn.push({t:a, ok:a === b});
+    }
+    const next = SEQ_LEVELS[SEQ_LEVELS.indexOf(Q.level) + 1];
+    body = `<div class="dirlabel">${Q.res.flawless ? tr('Foutloos!', 'Flawless!') : tr('Resultaat', 'Result')}</div>
+      <div class="seqrows">${seqRows(pairsIn).map(r => `<div class="seqrow numfont" style="font-size:clamp(20px,6vw,28px)">${r.map(p => `<span class="pr ${p.ok ? 'good' : 'wrong'}">${p.t.padEnd(2, '·')}</span>`).join('')}</div>`).join('')}</div>
+      ${Q.res.flawless ? '' : `<div class="hint">${tr('Juiste reeks:', 'Correct sequence:')}</div>
+      <div class="seqrows" style="opacity:.7">${seqRows(Q.pairs).map(r => `<div class="seqrow numfont" style="font-size:18px">${r.map(n => `<span class="pr">${pad2(n)}</span>`).join('')}</div>`).join('')}</div>`}
+      <div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">
+        <span class="chip">${Q.res.ok}/${Q.level} ${tr('cijfers', 'digits')}</span>
+        <span class="chip">${tr('prenten', 'memorize')}: ${fmtClock(Q.memMs)}</span>
+        <span class="chip">${tr('terughalen', 'recall')}: ${fmtClock(Q.recMs)}</span>
+      </div>`;
+    btns = `<div class="stack" style="flex:1">
+      ${Q.res.flawless && next ? `<button class="btn" data-act="seq-again" data-level="${next}">${tr('Level omhoog', 'Level up')} — ${next} ${tr('cijfers', 'digits')}</button>` : ''}
+      <button class="btn ${Q.res.flawless && next ? 'quiet' : ''}" data-act="seq-again" data-level="${Q.level}">${tr('Nog een keer', 'Once more')} — ${Q.level} ${tr('cijfers', 'digits')}</button>
+      <button class="btn quiet" data-act="sess-stop">${tr('Klaar', 'Done')}</button>
+    </div>`;
+  }
+  sess.innerHTML = `
+    <div class="sess-top">
+      <button class="icobtn" data-act="sess-stop" aria-label="Stop"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <span class="sess-count numfont" id="seq-timer">${Q.phase === 'done' ? tr('Reeks-proef', 'Sequence test') : fmtClock(Date.now() - Q.phaseStart)}</span>
+      <span class="sess-count numfont" style="width:40px;text-align:right">${Q.level}</span>
+    </div>
+    <div id="stage" style="overflow-y:auto;${Q.phase === 'mem' ? '' : 'justify-content:flex-start;padding-top:26px'}">${body}</div>
+    <div class="sess-btns" ${btns ? '' : 'style="display:none"'}>${btns}</div>`;
+}
+function seqFinish(){
+  const target = Q.pairs.map(n => pad2(n)).join('');
+  const inp = Q.input.join('');
+  const ok = [...inp].filter((c, i) => c === target[i]).length;
+  Q.res = {ok, flawless: ok === Q.level};
+  Q.recMs = Date.now() - Q.phaseStart;
+  Q.phase = 'done';
+  const h = seqHist();
+  h.push({ts:Date.now(), level:Q.level, ok, flawless:Q.res.flawless, memMs:Q.memMs, recMs:Q.recMs});
+  LS.set('paoSeq', h.slice(-200));
+  markDirty();
+}
+function stopSeq(){
+  if(Q && Q.clock) clearInterval(Q.clock);
+  Q = null;
+  $('#session').hidden = true;
+  render();
+}
+
+/* ================= kampioenen ================= */
+const ATHLETES = [
+  {id:'mullen', ini:'AM', g1:'#6C56E0', g2:'#0E8A6B', name:'Alex Mullen',
+   sub:{nl:'3× wereldkampioen', en:'3× World Memory Champion'},
+   teaser:{nl:'Traint 30 minuten per dag: een kwart pure snelheidsdrills, de rest complete wedstrijd-events — altijd inclusief het terughalen.',
+           en:'Trains 30 minutes a day: a quarter pure speed drills, the rest full competition events — always including the recall.'},
+   desc:{nl:'Drievoudig wereldkampioen (2015–2017) en arts. Mullen werd de snelste memorizer ter wereld naast een fulltime studie geneeskunde — met korte, gerichte sessies van zo\'n dertig minuten per dag.',
+         en:'Three-time World Memory Champion (2015–2017) and physician. Mullen became the fastest memorizer in the world alongside a full-time medical degree — with short, focused sessions of about thirty minutes a day.'},
+   why:{nl:'Door het grootste deel van je tijd aan complete rondes te besteden (memoriseren én terughalen) train je precies wat er straks van je gevraagd wordt. De snelheidsdrills eromheen houden je codering scherp — Mullen verbeterde zijn recall vooral door beelden bewuster aan hun plek te koppelen.',
+        en:'Spending most of your time on complete rounds (memorizing and recalling) trains exactly what will be asked of you. The speed drills around it keep your encoding sharp — Mullen improved his recall mainly by linking images more deliberately to their locations.'},
+   how:{nl:['5 minuten tempodrill: het volgende getal komt automatisch na 3 seconden — blijf hem voor.', 'Daarna de reeks-proef op jouw level: memoriseer de reeks en typ hem terug.', 'Check in de samenvatting welke beelden te traag kwamen.'],
+        en:['5 minutes of tempo drill: the next number appears automatically after 3 seconds — stay ahead of it.', 'Then the sequence test at your level: memorize the sequence and type it back.', 'Check the summary to see which images came too slowly.']},
+   actions:[
+     {label:{nl:'Deel 1 · Tempodrill (5 min)', en:'Part 1 · Tempo drill (5 min)'}, w:{id:'ath-mullen', name:'Mullen · tempodrill', mode:'all', len:2, dir:'pao', smart:true, tempo:3, limit:5}},
+     {label:{nl:'Deel 2 · Reeks-proef op jouw level', en:'Part 2 · Sequence test at your level'}, seq:true}
+   ]},
+  {id:'obrien', ini:'DO', g1:'#B4740A', g2:'#6C56E0', name:'Dominic O’Brien',
+   sub:{nl:'8× wereldkampioen', en:'8× World Memory Champion'},
+   teaser:{nl:'Acht wereldtitels. Zijn beroemde ‘Rule of Five’: vijf herhalingen op het juiste moment maken een herinnering vrijwel permanent.',
+           en:'Eight world titles. His famous ‘Rule of Five’: five repetitions at the right moments make a memory virtually permanent.'},
+   desc:{nl:'De grondlegger van de moderne geheugensport en uitvinder van het Dominic-systeem. O’Brien memoriseerde 54 kaartspellen na één keer kijken — en schrijft zijn succes toe aan discipline in herhalen, niet aan talent.',
+         en:'The founding father of modern memory sports and inventor of the Dominic system. O’Brien memorized 54 decks of cards after a single sighting — and credits his success to disciplined reviewing, not talent.'},
+   why:{nl:'Gespreide herhaling verslaat stampen: elke herhaling op het randje van vergeten maakt het geheugenspoor sterker. Deze workout pakt precies de nummers die volgens het schema van de app aan herhaling toe zijn — de app doet automatisch wat O’Brien met de hand bijhield.',
+        en:'Spaced repetition beats cramming: every review right at the edge of forgetting strengthens the memory trace. This workout targets exactly the items that are due according to the app\'s schedule — the app automates what O’Brien tracked by hand.'},
+   how:{nl:['5 minuten, alle richtingen door elkaar.', 'De slimme selectie geeft voorrang aan vervallen en zwakke nummers.', 'Rood gedrukt? Dat nummer komt vanzelf sneller terug.'],
+        en:['5 minutes, all directions mixed.', 'Smart selection prioritizes due and weak items.', 'Pressed red? That item will come back sooner automatically.']},
+   actions:[{label:{nl:'Start Rule of Five (5 min)', en:'Start Rule of Five (5 min)'}, w:{id:'ath-obrien', name:'O’Brien · Rule of Five', mode:'all', len:2, dir:'mix', smart:true, limit:5}}]},
+  {id:'vonessen', ini:'JE', g1:'#0E8A6B', g2:'#6C56E0', name:'Jonas von Essen',
+   sub:{nl:'2× wereldkampioen', en:'2× World Memory Champion'},
+   teaser:{nl:'Ging in twee jaar van ‘gewoon geheugen’ naar wereldkampioen. Zijn geheim: een korte sessie, élke dag, hoe druk het ook is.',
+           en:'Went from an ‘ordinary memory’ to World Champion in two years. His secret: one short session, every single day, no matter how busy.'},
+   desc:{nl:'De Zweed Jonas von Essen had naar eigen zeggen een doodgewoon geheugen tot hij als student de technieken ontdekte — twee jaar later was hij wereldkampioen. Zijn aanpak: consistentie boven alles, liever kort en dagelijks dan lang en af en toe.',
+         en:'Swede Jonas von Essen says he had a perfectly ordinary memory until he discovered the techniques as a student — two years later he was World Champion. His approach: consistency above all, short and daily beats long and occasional.'},
+   why:{nl:'Automatisme ontstaat door frequentie, niet door duur. Een dagelijkse micro-dosis houdt alle honderd beelden vers, kost nauwelijks wilskracht en is daardoor vol te houden — de motor achter elke grote sprong vooruit.',
+        en:'Automaticity comes from frequency, not duration. A daily micro-dose keeps all hundred images fresh, costs barely any willpower and is therefore sustainable — the engine behind every big leap forward.'},
+   how:{nl:['Precies 2 minuten — de timer stopt vanzelf.', 'Alle nummers, getal → P·A·O.', 'Klaar voordat je koffie is afgekoeld. Morgen weer.'],
+        en:['Exactly 2 minutes — the timer stops by itself.', 'All numbers, number → P·A·O.', 'Done before your coffee cools down. Again tomorrow.']},
+   actions:[{label:{nl:'Start dagelijkse dosis (2 min)', en:'Start daily dose (2 min)'}, w:{id:'ath-vonessen', name:'Von Essen · dagelijkse dosis', mode:'all', len:2, dir:'pao', smart:true, limit:2}}]},
+  {id:'yanjaa', ini:'YW', g1:'#6C56E0', g2:'#B4740A', name:'Yanjaa Wintersoul',
+   sub:{nl:'Grootmeester · meervoudig wereldrecordhouder', en:'Grandmaster · multiple world-record holder'},
+   teaser:{nl:'Memoriseerde de complete IKEA-catalogus. Haar kracht: hoe absurder en zintuiglijker het beeld, hoe beter het blijft plakken.',
+           en:'Memorized the entire IKEA catalogue. Her strength: the more absurd and sensory the image, the better it sticks.'},
+   desc:{nl:'Yanjaa Wintersoul zette wereldrecords op woorden en namen en werd wereldberoemd toen ze de volledige IKEA-catalogus uit haar hoofd leerde. Haar stijl: beelden die je kunt rúiken en hóren — hoe gekker, hoe beter.',
+         en:'Yanjaa Wintersoul set world records in words and names and became world-famous when she learned the entire IKEA catalogue by heart. Her style: images you can smell and hear — the weirder, the better.'},
+   why:{nl:'Een scène van drie beelden dwingt je tot actief combineren in plaats van passief herkennen. En uitgesteld terughalen bewijst of een beeld écht geplakt heeft — niet alleen even in je korte-termijngeheugen hing.',
+        en:'A scene of three images forces you to actively combine instead of passively recognize. And delayed recall proves whether an image truly stuck — rather than briefly floating in short-term memory.'},
+   how:{nl:['5 minuten scènes van 6 cijfers: persoon · actie · object als één geheel.', 'Neem per scène een seconde om hem echt te zíen — met geluid en beweging erbij.', 'Sluit af met uitgesteld terughalen: vijf nummers inprenten, dán pas terughalen.'],
+        en:['5 minutes of 6-digit scenes: person · action · object as one whole.', 'Take a second per scene to really see it — with sound and movement.', 'Finish with delayed recall: memorize five numbers, only then recall them.']},
+   actions:[
+     {label:{nl:'Deel 1 · Scènetraining (5 min)', en:'Part 1 · Scene training (5 min)'}, w:{id:'ath-yanjaa1', name:'Yanjaa · scènes', mode:'all', len:6, dir:'pao', smart:false, limit:5}},
+     {label:{nl:'Deel 2 · Uitgesteld terughalen (5 min)', en:'Part 2 · Delayed recall (5 min)'}, w:{id:'ath-yanjaa2', name:'Yanjaa · uitgesteld', mode:'all', len:2, dir:'pao', smart:true, delayed:true, limit:5}}
+   ]},
+  {id:'konrad', ini:'BK', g1:'#0E8A6B', g2:'#B4740A', name:'Boris Konrad',
+   sub:{nl:'Grootmeester & neurowetenschapper', en:'Grandmaster & neuroscientist'},
+   teaser:{nl:'Geheugengrootmeester én hersenonderzoeker in Nijmegen. Zijn les: juist beelden die op elkaar lijken moet je bewust uit elkaar trekken.',
+           en:'Memory grandmaster and brain researcher in Nijmegen. His lesson: images that resemble each other are exactly the ones to pull apart deliberately.'},
+   desc:{nl:'Boris Konrad combineert meerdere geheugenwereldrecords (onder andere namen en gezichten) met wetenschappelijk onderzoek naar geheugensporters aan het Donders Instituut in Nijmegen. Zijn boodschap: een topgeheugen is geen talent maar een trainbare vaardigheid.',
+         en:'Boris Konrad combines multiple memory world records (including names and faces) with scientific research on memory athletes at the Donders Institute in Nijmegen. His message: a top memory is not a talent but a trainable skill.'},
+   why:{nl:'Verwisseling is de grootste foutbron in elk getallensysteem, en spiegelparen (47 ↔ 74) zijn de beruchtste. Door ze bewust vlak na elkaar te trainen leert je brein het verschil scherp te coderen in plaats van te gokken.',
+        en:'Mix-ups are the biggest source of errors in any number system, and mirror pairs (47 ↔ 74) are the most notorious. Training them deliberately back-to-back teaches your brain to encode the difference sharply instead of guessing.'},
+   how:{nl:['5 minuten spiegelparen: 47 en 74 volgen elkaar bewust op.', 'Let bij elk paar op wat het beeld uniek maakt.', 'Blijft een paar verwisselen? De beeldkliniek pikt hem op.'],
+        en:['5 minutes of mirror pairs: 47 and 74 deliberately follow each other.', 'Notice what makes each image unique.', 'Keep mixing up a pair? The image clinic will catch it.']},
+   actions:[{label:{nl:'Start spiegeldrill (5 min)', en:'Start mirror drill (5 min)'}, w:{id:'ath-konrad', name:'Konrad · spiegeldrill', mode:'mirror', len:2, dir:'pao', smart:false, limit:5}}]}
+];
+function avatarSvg(a, size){
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="${a.name}" style="flex:none">
+    <defs><linearGradient id="av-${a.id}-${size}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${a.g1}"/><stop offset="1" stop-color="${a.g2}"/>
+    </linearGradient></defs>
+    <rect width="64" height="64" rx="18" fill="url(#av-${a.id}-${size})"/>
+    <text x="32" y="40" text-anchor="middle" font-size="21" font-weight="800" fill="rgba(255,255,255,.95)" font-family="ui-rounded,-apple-system,system-ui,sans-serif">${a.ini}</text>
+  </svg>`;
+}
+function openAthlete(id){
+  const a = ATHLETES.find(x => x.id === id);
+  if(!a) return;
+  openModal(`
+    <div class="row" style="gap:14px;margin-bottom:14px">
+      ${avatarSvg(a, 84)}
+      <div><h2 style="margin:0 0 2px">${a.name}</h2><div class="hint">${tx(a.sub)}</div></div>
+    </div>
+    <div class="stack">
+      <div style="font-size:15px;line-height:1.55">${tx(a.desc)}</div>
+      <div><div class="label" style="margin-bottom:6px">${tr('Waarom dit werkt', 'Why this works')}</div><div class="hint" style="font-size:14px;line-height:1.5">${tx(a.why)}</div></div>
+      <div><div class="label" style="margin-bottom:6px">${tr('Zo ziet de workout eruit', 'What the workout looks like')}</div><ol class="ath-steps">${tx(a.how).map(s => `<li>${s}</li>`).join('')}</ol></div>
+      ${a.actions.map((x, i) => `<button class="btn ${i ? 'quiet' : ''}" data-act="ath-start" data-id="${a.id}" data-i="${i}">${tx(x.label)}</button>`).join('')}
+      <div class="hint" style="font-size:12px">${tr('Vrij vertaald naar de trainingsvormen van deze app.', 'Freely translated to the training modes of this app.')}</div>
+      <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
+    </div>`);
+}
+
+/* ================= system-builder wizard ================= */
+const TEMPLATE_P = ['Olive Oyl','Aladdin','Obi-Wan Kenobi','Cleopatra','Odin','Elsa (Frozen)','Santa Claus','James Bond','Oliver Hardy','Mary Poppins',
+'Asterix','Andre Agassi','Antonio Banderas (Zorro)','Al Capone','Charlie Chaplin','Albert Einstein','Arnold Schwarzenegger','Angelina Jolie','Neil Armstrong','Amy Winehouse',
+'Barack Obama','Mr. Bean','Bugs Bunny','Michael Jordan','Boris Becker','Britney Spears','Bart Simpson','Bill Gates','Usain Bolt','Bob Marley',
+'Coco Chanel','Captain America','Batman','Céline Dion','Cameron Diaz','Clint Eastwood','Chewbacca','Che Guevara','Thor','Conor McGregor',
+'Donkey Kong','Charles Darwin','David Beckham','David Copperfield','Donald Duck','Jack Sparrow','Doctor Strange','Dracula','Dumbledore','Demi Moore',
+'50 Cent','E.T.','Ed Sheeran','Elton John','Ellen DeGeneres','Elvis Presley','Edward Snowden','Hermelien (Hermione)','Ethan Hunt','Elon Musk',
+'Shaquille O\'Neal','Serena Williams','Salt Bae','Sneeuwwitje (Snow White)','Scooby-Doo','Spider-Man','Rambo','Shrek','Sherlock Holmes','Superman',
+'Gandalf','Lady Gaga','Goofy','George Clooney','Gordon Ramsay','Greta Thunberg','Garfield','Wonder Woman','Genghis Khan','Gollum',
+'Frodo','Harry Potter','Halle Berry','Hannibal Lecter','Homer Simpson','He-Man','Hercules','Hugh Grant','Hulk Hogan','de Koningin (the Queen)',
+'Mona Lisa','Muhammad Ali','Madonna','Magnus Carlsen','Nelson Mandela','Freddie Mercury','Meryl Streep','Mahatma Gandhi','Michael Jackson','Marilyn Monroe'];
+let WZ = null;
+function wizDraft(){ return LS.get('paoWizardDraft', null) }
+function openWizard(){
+  const saved = wizDraft();
+  openModal(`
+    <h2>${tr('Bouw je eigen PAO-systeem', 'Build your own PAO system')}</h2>
+    <div class="stack">
+      <div class="hint" style="font-size:14px;line-height:1.5">${tr(
+        'Je kiest voor elk nummer (00–99) een persoon, actie en object. De app stelt per nummer een bekende figuur voor — neem hem over of kies iemand die jíj meteen vóór je ziet. Een actie is één kenmerkende beweging; een object iets wat je vast kunt pakken. Persoonlijke keuzes plakken het best.',
+        'You choose a person, action and object for every number (00–99). The app suggests a famous figure per number — accept it or pick someone you instantly picture. An action is one characteristic movement; an object is something you can hold. Personal choices stick best.')}</div>
+      <div class="hint" style="color:var(--bad-ink)">${tr('Let op: afronden vervangt je huidige lijst en zet alle statistieken op nul.', 'Note: finishing replaces your current list and resets all statistics.')}</div>
+      ${saved ? `<button class="btn" data-act="wiz-resume">${tr('Ga verder bij nummer', 'Continue at number')} ${pad2(saved.i)}</button>` : ''}
+      <button class="btn ${saved ? 'quiet' : ''}" data-act="wiz-new">${tr('Begin opnieuw', 'Start fresh')}</button>
+      <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
+    </div>`);
+}
+function wizStart(resume){
+  const saved = resume ? wizDraft() : null;
+  WZ = saved || {i:0, draft:Array.from({length:100}, () => ({p:'', a:'', o:''}))};
+  wizRender();
+}
+function wizSaveFields(){
+  if(!WZ) return;
+  const d = WZ.draft[WZ.i];
+  for(const el of ELS){ const f = $('#wz-' + el); if(f) d[el] = f.value.trim() }
+  LS.set('paoWizardDraft', WZ);
+}
+function wizRender(){
+  const n = WZ.i, d = WZ.draft[n];
+  const done = WZ.draft.filter(x => x.p && x.a && x.o).length;
+  openModal(`
+    <div class="row" style="margin-bottom:12px">
+      <span class="numfont" style="font-size:30px;font-weight:800">${pad2(n)}</span>
+      <span class="hint">${esc(LIST[n].code)}</span>
+      <span class="grow"></span>
+      <span class="hint">${done}/100 ${tr('compleet', 'complete')}</span>
+    </div>
+    <div class="stack">
+      <div>
+        <div class="label" style="margin-bottom:6px;color:var(--p)">${elName('p')}</div>
+        <input class="field" id="wz-p" value="${esc(d.p || TEMPLATE_P[n])}">
+        <div class="hint" style="margin-top:4px">${tr('Voorstel', 'Suggestion')}: ${esc(TEMPLATE_P[n])}</div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;color:var(--a)">${elName('a')}</div>
+        <input class="field" id="wz-a" value="${esc(d.a)}" placeholder="${tr('één kenmerkende beweging', 'one characteristic movement')}">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px;color:var(--o)">${elName('o')}</div>
+        <input class="field" id="wz-o" value="${esc(d.o)}" placeholder="${tr('iets wat je vast kunt pakken', 'something you can hold')}">
+      </div>
+      <div class="row" style="gap:10px">
+        <button class="btn quiet small grow" data-act="wiz-prev" ${n === 0 ? 'disabled' : ''}>${tr('Vorige', 'Back')}</button>
+        <button class="btn small grow" data-act="wiz-next">${n === 99 ? tr('Afronden', 'Finish') : tr('Volgende', 'Next')}</button>
+      </div>
+      <button class="btn quiet" data-act="wiz-pause">${tr('Stop — bewaar concept', 'Stop — save draft')}</button>
+    </div>`);
+}
+function wizFinishScreen(){
+  openModal(`
+    <h2>${tr('Systeem vervangen?', 'Replace system?')}</h2>
+    <div class="stack">
+      <div class="hint">${tr('Je nieuwe lijst vervangt de huidige en alle statistieken en het herhaalschema beginnen opnieuw. Maak eventueel eerst een backup via Inzicht → Data.', 'Your new list replaces the current one, and all statistics and the review schedule start over. Consider making a backup first via Insights → Data.')}</div>
+      <button class="btn" data-act="wiz-apply" style="background:var(--bad);color:#fff">${tr('Vervang mijn systeem', 'Replace my system')}</button>
+      <button class="btn quiet" data-act="wiz-pause">${tr('Bewaar als concept', 'Save as draft')}</button>
+    </div>`);
+}
+function wizApply(){
+  LIST = WZ.draft.map((d, n) => ({
+    n, code:LIST[n].code,
+    p:d.p || TEMPLATE_P[n], a:d.a || '', o:d.o || '',
+    excluded:false, editP:0, editA:0, editO:0
+  }));
+  LOG = []; SRS = {};
+  saveList(); saveLog(); saveSrs();
+  try{ localStorage.removeItem('paoWizardDraft') }catch(e){}
+  WZ = null;
+  closeModal(); render();
+  toast(tr('Nieuw systeem actief', 'New system active'));
+}
+
+/* ================= bulk-import ================= */
+function parseBulk(text, kind){
+  const rows = [], errors = [];
+  const lines = text.split(/\r?\n/).map(l => l.replace(/ /g, ' ').trim()).filter(l => l);
+  if(!lines.length) return {rows, errors};
+  const probe = lines[0];
+  const delim = probe.includes('\t') ? '\t' : (probe.includes(';') ? ';' : ',');
+  const suitMap = {'♠':0,'s':0,'spades':0,'schoppen':0,'♥':1,'h':1,'hearts':1,'harten':1,'♦':2,'d':2,'r':2,'diamonds':2,'ruiten':2,'♣':3,'c':3,'k':3,'clubs':3,'klaveren':3};
+  const rankMap = {'a':0,'aas':0,'ace':0,'1':0,'j':10,'b':10,'boer':10,'jack':10,'q':11,'v':11,'vrouw':11,'dame':11,'queen':11,'k':12,'h':12,'heer':12,'koning':12,'king':12};
+  const rankOf = s => {
+    s = s.toLowerCase();
+    if(/^(10|[2-9])$/.test(s)) return parseInt(s, 10) - 1;
+    return rankMap[s] !== undefined ? rankMap[s] : null;
+  };
+  lines.forEach((line, li) => {
+    const cells = line.split(delim).map(c => c.trim().replace(/^"(.*)"$/, '$1').trim());
+    let n = null, rest;
+    if(kind === 'num'){
+      if(!/^\d{1,2}$/.test(cells[0])){
+        if(li === 0) return; // kopregel
+        errors.push({line:li + 1, msg:tr('geen nummer 0–99 in de eerste kolom', 'no number 0–99 in the first column')});
+        return;
+      }
+      n = parseInt(cells[0], 10);
+      rest = cells.slice(1);
+      let code = null;
+      if(rest.length >= 4 && /^[A-Za-z]{2}$/.test(rest[0])){ code = rest[0].toUpperCase(); rest = rest.slice(1) }
+      if(!(rest[0] || '').trim()){
+        errors.push({line:li + 1, msg:tr('geen persoon gevonden', 'no person found')});
+        return;
+      }
+      rows.push({n, code, p:rest[0] || '', a:rest[1] || '', o:rest[2] || ''});
+    } else {
+      // kaart: "A♠" / "10H" / "QD" in kolom 1, of rang + kleur in kolom 1+2
+      let s = null, r = null;
+      const m = cells[0].replace(/\s+/g, '').match(/^(10|[2-9AJQKajqkBbVv])(♠|♥|♦|♣|[SsHhDdCc])$/);
+      if(m){ r = rankOf(m[1]); s = suitMap[m[2].toLowerCase()]; rest = cells.slice(1) }
+      else {
+        r = rankOf(cells[0] || ''); s = suitMap[(cells[1] || '').toLowerCase()];
+        rest = cells.slice(2);
+      }
+      if(r === null || s === undefined || s === null){
+        if(li === 0) return; // kopregel
+        errors.push({line:li + 1, msg:tr('kaart niet herkend (gebruik bijv. A♠, 10H, QD of "aas;schoppen")', 'card not recognized (use e.g. A♠, 10H, QD or "ace;spades")')});
+        return;
+      }
+      if(!(rest[0] || '').trim()){
+        errors.push({line:li + 1, msg:tr('geen persoon gevonden', 'no person found')});
+        return;
+      }
+      rows.push({n:100 + s * 13 + r, p:rest[0] || '', a:rest[1] || '', o:rest[2] || ''});
+    }
+  });
+  return {rows, errors};
+}
+function applyBulk(kind){
+  const {rows} = parseBulk($('#bulk-txt').value, kind);
+  if(!rows.length){ toast(tr('Geen geldige rijen', 'No valid rows')); return }
+  const now = Date.now();
+  let changed = 0;
+  for(const r of rows){
+    const e = entryFor(r.n);
+    for(const el of ELS){
+      const v = (r[el] || '').trim();
+      if(v && v !== e[el]){
+        e[el] = v;
+        if(el === 'p') e.editP = now; if(el === 'a') e.editA = now; if(el === 'o') e.editO = now;
+        delete SRS[r.n + ':' + el];
+        changed++;
+      }
+    }
+    if(kind === 'num' && r.code) e.code = r.code;
+  }
+  if(kind === 'num') saveList(); else saveCards();
+  saveSrs(); closeModal(); render();
+  toast(`${rows.length} ${tr('rijen geïmporteerd', 'rows imported')}${changed ? '' : tr(' (geen wijzigingen)', ' (no changes)')}`);
+}
+function bulkPreview(kind){
+  const el = $('#bulk-prev'); if(!el) return;
+  const txt = $('#bulk-txt').value;
+  if(!txt.trim()){ el.innerHTML = ''; $('#bulk-go').disabled = true; return }
+  const {rows, errors} = parseBulk(txt, kind);
+  $('#bulk-go').disabled = !rows.length;
+  el.innerHTML = `
+    <div class="hint" style="${rows.length ? 'color:var(--o)' : ''}">${rows.length} ${tr('rijen herkend', 'rows recognized')}</div>
+    ${errors.slice(0, 5).map(e => `<div class="hint" style="color:var(--bad-ink)">${tr('Regel', 'Line')} ${e.line}: ${e.msg}</div>`).join('')}
+    ${errors.length > 5 ? `<div class="hint">+ ${errors.length - 5} ${tr('andere fouten', 'more errors')}</div>` : ''}`;
+}
+function openBulk(kind){
+  const fmt = kind === 'num'
+    ? tr('Eén rij per nummer: <b>nummer; persoon; actie; object</b> — gescheiden door tab, puntkomma of komma. Kolommen kopiëren vanuit Excel of Numbers en hier plakken werkt direct. Een kolom met lettercode (zoals BC) tussen nummer en persoon mag.', 'One row per number: <b>number; person; action; object</b> — separated by tab, semicolon or comma. Copying columns from Excel or Numbers and pasting here works directly. A letter-code column (like BC) between number and person is allowed.')
+    : tr('Eén rij per kaart: <b>kaart; persoon; actie; object</b>. De kaart schrijf je als A♠, 10H of QD, of als twee kolommen: aas; schoppen. Kleuren: S/H/D/C of schoppen/harten/ruiten/klaveren.', 'One row per card: <b>card; person; action; object</b>. Write the card as A♠, 10H or QD, or as two columns: ace; spades. Suits: S/H/D/C or spades/hearts/diamonds/clubs.');
+  openModal(`
+    <h2>${tr('Bulk-import', 'Bulk import')} — ${kind === 'num' ? tr('getallen', 'numbers') : tr('kaarten', 'cards')}</h2>
+    <div class="stack">
+      <div class="hint" style="line-height:1.5">${fmt}</div>
+      <div class="hint">${tr('Alleen ingevulde cellen overschrijven de huidige waarde. Van gewijzigde elementen beginnen de statistieken opnieuw.', 'Only filled cells overwrite the current value. Statistics of changed elements start over.')}</div>
+      <textarea class="field" id="bulk-txt" rows="7" placeholder="${kind === 'num' ? tr('23; Bill Clinton; peutert in de neus; zakdoek', '23; Michael Jordan; dunks; basketball') : tr('A♠; Sneeuwwitje; bijt in appel; giftige appel', 'A♠; Snow White; bites an apple; poisoned apple')}" data-bulk="${kind}"></textarea>
+      <label class="btn quiet small filebtn">${tr('Of kies een CSV/tekstbestand', 'Or choose a CSV/text file')}<input type="file" accept=".csv,.tsv,.txt,text/plain,text/csv" id="bulk-file" data-kind="${kind}"></label>
+      <div id="bulk-prev"></div>
+      <button class="btn" id="bulk-go" data-act="bulk-apply" data-kind="${kind}" disabled>${tr('Importeer', 'Import')}</button>
+      <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
+    </div>`);
+}
+
+/* ================= views ================= */
+const ICONS = {
+  train:'<svg viewBox="0 0 24 24"><path d="M8 6.5v11l9-5.5-9-5.5z"/></svg>',
+  workouts:'<svg viewBox="0 0 24 24"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/></svg>',
+  lib:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+  stats:'<svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></svg>'
+};
+let TAB = 'train';
+let LIBQ = '';
+let LIBSRC = 'num';
+let STATSEL = null;
+function render(){
+  $('#tabbar').innerHTML = [
+    ['train', tr('Trainen', 'Train'), ICONS.train], ['workouts', 'Workouts', ICONS.workouts],
+    ['lib', tr('Bibliotheek', 'Library'), ICONS.lib], ['stats', tr('Inzicht', 'Insights'), ICONS.stats]
+  ].map(([id, name, ico]) => `<button class="${TAB === id ? 'on' : ''}" data-act="tab" data-tab="${id}">${ico}<span>${name}</span></button>`).join('');
+  const v = $('#view');
+  if(TAB === 'train') v.innerHTML = viewTrain();
+  else if(TAB === 'workouts') v.innerHTML = viewWorkouts();
+  else if(TAB === 'lib') v.innerHTML = viewLib();
+  else v.innerHTML = viewStats();
+}
+function viewTrain(){
+  const rec = recommendation();
+  const due = dueNumbers();
+  const anyData = LOG.length > 0;
+  let recCard = '';
+  if(rec){
+    const bits = [];
+    if(rec.nMid) bits.push(`${rec.nMid} ${tr('consolidatie', 'consolidation')}`);
+    if(rec.nWeak) bits.push(`${rec.nWeak} ${tr('uitdagend', 'challenging')}`);
+    if(rec.nNew) bits.push(`${rec.nNew} ${tr('nieuw', 'new')}`);
+    recCard = `
+      <div class="card stack" style="gap:10px">
+        <div class="label">${tr('Aanbevolen training', 'Recommended training')}</div>
+        <div style="font-weight:700">${rec.nums.length} ${tr('nummers', 'numbers')} · ${dirLabel(rec.dir)}</div>
+        <div class="hint">${bits.join(' + ')} — ${tr('makkelijk eerst, moeilijk erin gemengd.', 'easy first, hard ones mixed in.')}</div>
+        <button class="btn" data-act="start-rec" data-nums="${rec.nums.join(',')}" data-dir="${rec.dir}">${tr('Start aanbevolen', 'Start recommended')}</button>
+      </div>`;
+  } else if(anyData){
+    recCard = `<div class="card hint">${tr('Nog te weinig data voor een aanbeveling — train eerst een paar rondes.', 'Not enough data for a recommendation yet — train a few rounds first.')}</div>`;
+  }
+  return `
+    <h1>PAO Trainer</h1>
+    <div class="stack">
+      <div class="card stack" style="gap:12px">
+        <div class="label">${tr('Snelle training', 'Quick training')}</div>
+        <div class="seg">${[2,4,6].map(l => `<button class="${SET.qLen === l ? 'on' : ''}" data-act="qlen" data-v="${l}">${l} ${tr('cijfers', 'digits')}</button>`).join('')}</div>
+        ${SET.qLen === 2
+          ? `<select class="field" id="qdir">${DIRS.map(([v, t]) => `<option value="${v}" ${SET.qDir === v ? 'selected' : ''}>${tx(t)}</option>`).join('')}</select>`
+          : `<div class="hint">${SET.qLen === 4 ? tr('Persoon van het eerste paar, actie van het tweede.', 'Person from the first pair, action from the second.') : tr('Persoon · actie · object van de drie paren — één scène.', 'Person · action · object from the three pairs — one scene.')}</div>`}
+        <div class="seg">${[[0, tr('Geen timer', 'No timer')],[2,'2 min'],[5,'5 min'],[10,'10 min']].map(([v,t]) => `<button class="${(SET.qTimer || 0) === v ? 'on' : ''}" data-act="qtimer" data-v="${v}">${t}</button>`).join('')}</div>
+        <div class="seg">${[[0, tr('Eigen tempo', 'Own pace')],[4,'4s'],[3,'3s'],[2,'2s']].map(([v,t]) => `<button class="${(SET.qTempo || 0) === v ? 'on' : ''}" data-act="qtempo" data-v="${v}">${t}</button>`).join('')}</div>
+        <button class="btn" data-act="start-quick">Start</button>
+        ${due.size ? `<div class="hint">${due.size} ${due.size === 1 ? tr('nummer is toe aan herhaling.', 'item is due for review.') : tr('nummers zijn toe aan herhaling.', 'items are due for review.')}</div>` : ''}
+      </div>
+      ${recCard}
+      <div class="card stack" style="gap:10px">
+        <div class="label">${tr('Reeks-proef', 'Sequence test')}</div>
+        <div class="hint">${tr('De echte test: memoriseer een cijferreeks op eigen tempo en typ hem daarna terug.', 'The real test: memorize a digit sequence at your own pace, then type it back.')}</div>
+        <div class="row">
+          <span class="grow" style="font-weight:600">Level</span>
+          <select class="field" id="seqlevel" style="width:130px;flex:none">${SEQ_LEVELS.map(l => `<option value="${l}" ${SET.seqLevel === l ? 'selected' : ''}>${l} ${tr('cijfers', 'digits')}</option>`).join('')}</select>
+        </div>
+        ${(() => { const fl = seqHist().filter(h => h.flawless); const best = fl.reduce((m, h) => Math.max(m, h.level), 0); return best ? `<div class="hint">${tr('Record', 'Best')}: ${best} ${tr('cijfers foutloos.', 'digits flawless.')}</div>` : '' })()}
+        <button class="btn" data-act="start-seq">${tr('Start reeks-proef', 'Start sequence test')}</button>
+      </div>
+      <div class="card stack" style="gap:14px">
+        <div class="label">${tr('Instellingen', 'Settings')}</div>
+        <div class="row">
+          <div class="grow">${tr('Weergave', 'Appearance')}</div>
+          <div class="seg" style="flex:none;width:210px">${[['auto','Auto'],['light', tr('Licht', 'Light')],['dark', tr('Donker', 'Dark')]].map(([v,t]) => `<button class="${SET.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}">${t}</button>`).join('')}</div>
+        </div>
+        <div class="row">
+          <div class="grow">${tr('Taal', 'Language')}</div>
+          <div class="seg" style="flex:none;width:210px">${[['nl','Nederlands'],['en','English']].map(([v,t]) => `<button class="${SET.lang === v ? 'on' : ''}" data-act="lang" data-v="${v}">${t}</button>`).join('')}</div>
+        </div>
+        <div class="row">
+          <div class="grow">Audio <span class="hint">— ${tr('leest het nummer voor, handig in het donker', 'reads the number aloud, handy in the dark')}</span></div>
+          <label class="tgl"><input type="checkbox" data-act="audio" ${SET.audio ? 'checked' : ''}><span></span></label>
+        </div>
+      </div>
+      <div class="card stack" style="gap:10px">
+        <div class="label">Cloud-sync</div>
+        ${SET.syncOn && SET.syncCode ? `
+          <div class="hint">${tr('Je gegevens (lijst, kaarten, statistieken, workouts) synchroniseren automatisch. Foto\\u2019s niet.', 'Your data (list, cards, statistics, workouts) syncs automatically. Photos excluded.')}</div>
+          <div class="row"><span class="numfont" style="font-weight:700;letter-spacing:.05em">${esc(SET.syncCode)}</span><span class="grow"></span><button class="btn small quiet" data-act="sync-copy">${tr('Kopieer', 'Copy')}</button></div>
+          <div class="hint" id="sync-status">${SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL') : ''}</div>
+          <div class="row" style="gap:10px">
+            <button class="btn quiet small grow" data-act="sync-now">${tr('Nu synchroniseren', 'Sync now')}</button>
+            <button class="btn quiet small grow" data-act="sync-off" style="color:var(--bad-ink)">${tr('Zet uit', 'Turn off')}</button>
+          </div>` : `
+          <div class="hint">${tr('Bewaar je voortgang in de cloud en train op meerdere apparaten met één synccode.', 'Keep your progress in the cloud and train on multiple devices with one sync code.')}</div>
+          <button class="btn" data-act="sync-setup">${tr('Zet cloud-sync aan', 'Enable cloud sync')}</button>`}
+      </div>
+    </div>`;
+}
+function wkSpec(w){
+  const parts = [`${w.len} ${tr('cijfers', 'digits')}`, dirLabel(w.dir)];
+  if(w.mode === 'range') parts.push(`${pad2(w.from)}–${pad2(w.to)}`);
+  else if(w.mode === 'first') parts.push(`${w.digit}0–${w.digit}9`);
+  else if(w.mode === 'last') parts.push(tr(`eindigt op ${w.digit}`, `ending in ${w.digit}`));
+  else if(w.mode === 'manual') parts.push(`${(w.sel || []).length} ${tr('gekozen', 'selected')}`);
+  else if(w.mode === 'mirror') parts.push('47 ↔ 74');
+  else if(w.mode === 'cards') parts.push(tr('speelkaarten', 'playing cards'));
+  else parts.push(tr('alle nummers', 'all numbers'));
+  if(w.tempo) parts.push(w.tempo + 's tempo');
+  if(w.delayed) parts.push(tr('5 inprenten → terughalen', 'memorize 5 → recall'));
+  if(w.smart) parts.push(tr('slim', 'smart'));
+  return parts.join(' · ');
+}
+function viewWorkouts(){
+  const card = (w, builtin) => `
+    <div class="card row" style="padding:14px 16px">
+      <button class="grow" data-act="${builtin ? 'wk-play' : 'wk-edit'}" data-id="${w.id}" style="text-align:left">
+        <div style="font-weight:700">${esc(builtin ? builtinName(w) : w.name)}</div>
+        <div class="wkspec">${wkSpec(w)} · ${poolFor(w).length} ${tr('nummers', 'items')}</div>
+      </button>
+      <button class="btn small" data-act="wk-play" data-id="${w.id}">Start</button>
+    </div>`;
+  return `
+    <h1>Workouts</h1>
+    <div class="stack">
+      <div class="label">${tr('Train als een kampioen', 'Train like a champion')}</div>
+      ${ATHLETES.map(a => `
+        <button class="card athcard" data-act="ath-open" data-id="${a.id}">
+          ${avatarSvg(a, 64)}
+          <span class="grow">
+            <div style="font-weight:800">${a.name}</div>
+            <div class="hint" style="font-size:12px">${tx(a.sub)}</div>
+            <div class="teaser">${tx(a.teaser)}</div>
+          </span>
+        </button>`).join('')}
+      <div class="label" style="margin-top:10px">${tr('Jouw workouts', 'Your workouts')}</div>
+      ${BUILTIN.map(w => card(w, true)).join('')}
+      ${WORKOUTS.map(w => card(w, false)).join('')}
+      <button class="btn quiet" data-act="wk-new">+ ${tr('Nieuwe workout', 'New workout')}</button>
+      <div class="hint">${tr('Tik op een eigen workout om hem te bewerken. "Slim" weegt zwakke en vervallen nummers zwaarder.', 'Tap one of your own workouts to edit it. "Smart" weighs weak and due items more heavily.')}</div>
+    </div>`;
+}
+function viewLib(){
+  const st = buildStats();
+  const flags = new Set(clinicFlags(st).map(f => f.n + ':' + f.el));
+  const q = LIBQ.trim().toLowerCase();
+  const source = LIBSRC === 'card'
+    ? CARDS.map(c => ({...c, id:100 + c.c}))
+    : LIST.map(e => ({...e, id:e.n}));
+  const items = source.filter(e => {
+    if(!q) return true;
+    const key = LIBSRC === 'card' ? (cardMeta(e.id).label + ' ' + cardName(e.id)) : (pad2(e.id) + ' ' + e.code);
+    return key.toLowerCase().includes(q) || e.p.toLowerCase().includes(q) || e.a.toLowerCase().includes(q) || e.o.toLowerCase().includes(q);
+  });
+  const bigCell = e => {
+    if(LIBSRC === 'card'){
+      const m = cardMeta(e.id);
+      return `<span class="n" ${m.red ? 'style="color:var(--bad-ink)"' : ''}>${m.label}</span><span class="code">${esc(cardName(e.id))}</span>`;
+    }
+    return `<span class="n">${pad2(e.id)}</span><span class="code">${esc(e.code)}</span>`;
+  };
+  return `
+    <h1>${tr('Bibliotheek', 'Library')}</h1>
+    <div class="stack" style="gap:10px">
+      <div class="seg">${[['num', tr('Getallen', 'Numbers')], ['card', tr('Kaarten', 'Cards')]].map(([v, t]) => `<button class="${LIBSRC === v ? 'on' : ''}" data-act="libsrc" data-v="${v}">${t}</button>`).join('')}</div>
+      ${LIBSRC === 'num' ? `
+        <button class="card row" data-act="wiz-open" style="padding:13px 16px;text-align:left">
+          <span class="grow"><b>${tr('Bouw je eigen PAO-systeem', 'Build your own PAO system')}</b><div class="hint">${tr('Wizard met suggesties per nummer — voor een nieuwe lijst vanaf nul.', 'Wizard with suggestions per number — for a fresh list from scratch.')}</div></span>
+          <span class="hint" style="font-size:20px">›</span>
+        </button>
+        <button class="card row" data-act="bulk-open" data-kind="num" style="padding:13px 16px;text-align:left">
+          <span class="grow"><b>${tr('Bulk-import', 'Bulk import')}</b><div class="hint">${tr('Plak je lijst vanuit Excel of kies een CSV-bestand.', 'Paste your list from Excel or choose a CSV file.')}</div></span>
+          <span class="hint" style="font-size:20px">›</span>
+        </button>` : `
+        <div class="hint">${tr('Koppel aan elke speelkaart een persoon, actie en object. Alleen ingevulde kaarten doen mee in de kaarten-workout.', 'Give each playing card a person, action and object. Only filled-in cards join the cards workout.')}</div>
+        <button class="card row" data-act="bulk-open" data-kind="card" style="padding:13px 16px;text-align:left">
+          <span class="grow"><b>${tr('Bulk-import', 'Bulk import')}</b><div class="hint">${tr('Plak je kaartsysteem vanuit Excel of kies een CSV-bestand.', 'Paste your card system from Excel or choose a CSV file.')}</div></span>
+          <span class="hint" style="font-size:20px">›</span>
+        </button>`}
+      <input class="field" id="libsearch" placeholder="${tr('Zoek op nummer, persoon, actie of object', 'Search by number, person, action or object')}" value="${esc(LIBQ)}">
+      <div class="hint">${tr('Schakelaar uit = komt niet meer terug in de randomiser.', 'Switch off = no longer appears in the randomizer.')}</div>
+      ${items.map(e => `
+        <div class="card libcard ${e.excluded ? 'excluded' : ''}">
+          <button class="libmain" data-act="lib-edit" data-n="${e.id}">
+            <div class="big numfont">${bigCell(e)}${IMGURL.has(e.id) ? `<img class="thumb" src="${IMGURL.get(e.id)}" alt="">` : ''}</div>
+            <div class="els grow">
+              ${e.p || e.a || e.o
+                ? ELS.map(el => `<div class="el ${el}"><span class="tag">${el.toUpperCase()}</span><span class="txt">${esc(e[el])}${flags.has(e.id + ':' + el) ? ` <span class="badge weak">${tr('zwak', 'weak')}</span>` : ''}</span></div>`).join('')
+                : `<div class="hint" style="align-self:center">${tr('Nog leeg — tik om in te vullen', 'Still empty — tap to fill in')}</div>`}
+              ${e.excluded ? `<span class="badge off" style="align-self:flex-start">${tr('niet in randomiser', 'not in randomizer')}</span>` : ''}
+            </div>
+          </button>
+          <label class="tgl sm" aria-label="in randomiser"><input type="checkbox" data-act="lib-excl" data-n="${e.id}" ${e.excluded ? '' : 'checked'}><span></span></label>
+        </div>`).join('')}
+      ${!items.length ? `<div class="hint">${tr('Geen resultaten.', 'No results.')}</div>` : ''}
+    </div>`;
+}
+function viewStats(){
+  const st = buildStats();
+  const cells = [];
+  for(let n = 0; n < 100; n++){
+    const s = numStrength(st, n);
+    const b = bucket(s);
+    cells.push(`<button class="numfont ${b >= 0 ? 's' + b : ''} ${LIST[n].excluded ? 'x' : ''} ${STATSEL === n ? 'sel' : ''}" data-act="stat-cell" data-n="${n}">${pad2(n)}</button>`);
+  }
+  const okAtt = LOG.filter(x => x.ok);
+  const total = LOG.length;
+  const okPct = total ? Math.round(okAtt.length / total * 100) : 0;
+  const wk = 7*24*3600e3; const now = Date.now();
+  const bars = [];
+  for(let i = 7; i >= 0; i--){
+    const from = now - (i+1)*wk, to = now - i*wk;
+    const ms = LOG.filter(x => x.ok && x.ts >= from && x.ts < to).map(x => x.ms);
+    bars.push(ms.length ? ms.reduce((a,b) => a+b,0)/ms.length : 0);
+  }
+  const maxBar = Math.max(...bars, 1);
+  const flags = clinicFlags(st);
+  let detail = '';
+  if(STATSEL !== null){
+    const e = LIST[STATSEL];
+    detail = `
+      <div class="card stack" style="gap:10px">
+        <div class="row"><span class="numfont" style="font-size:26px;font-weight:800">${pad2(STATSEL)}</span><span class="hint">${esc(e.code)}</span>
+          <span class="grow"></span><button class="btn small quiet" data-act="lib-edit" data-n="${STATSEL}">${tr('Bewerk', 'Edit')}</button></div>
+        ${ELS.map(el => {
+          const s = elemStrength(st, STATSEL, el);
+          const c = attemptsCount(st, STATSEL, el);
+          const att = st.map[STATSEL + ':' + el] || [];
+          const okT = att.filter(x => x.ok).map(x => x.ms);
+          const t = okT.length ? (okT.reduce((a,b) => a+b,0)/okT.length/1000).toFixed(1) + 's' : '—';
+          return `<div class="el ${el}"><span class="tag">${el.toUpperCase()}</span><span class="txt grow">${esc(e[el])}</span>
+            <span class="hint" style="flex:none">${s === null ? tr('nog niet geoefend', 'not trained yet') : Math.round(s*100) + '% · ' + t + ' · ' + c + '×'}</span></div>`;
+        }).join('')}
+      </div>`;
+  }
+  return `
+    <h1>${tr('Inzicht', 'Insights')}</h1>
+    <div class="stack">
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <span class="chip">${total} ${tr('beurten', 'turns')}</span>
+        <span class="chip">${okPct}% ${tr('gekend', 'known')}</span>
+        <span class="chip">${flags.length} ${tr('zwakke beelden', 'weak images')}</span>
+      </div>
+      <div class="card stack" style="gap:12px">
+        <div class="label">${tr('Sterkte per nummer', 'Strength per number')}</div>
+        <div class="heat">${cells.join('')}</div>
+        <div class="legend"><span>${tr('zwak', 'weak')}</span><i style="background:var(--h0)"></i><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i><span>${tr('sterk', 'strong')}</span><span style="margin-left:auto">${tr('grijs = nog geen data', 'grey = no data yet')}</span></div>
+      </div>
+      ${detail}
+      ${flags.length ? `
+        <div class="card stack" style="gap:10px">
+          <div class="label">${tr('Beeldkliniek', 'Image clinic')}</div>
+          <div class="hint">${tr('Deze elementen blijven zwak na flink oefenen. Vaak is het beeld zelf het probleem — overweeg een levendiger of duidelijker alternatief.', 'These elements stay weak despite plenty of practice. Often the image itself is the problem — consider a more vivid or distinct alternative.')}</div>
+          ${flags.slice(0, 6).map(f => `
+            <div class="row">
+              <span class="chip"><span class="numfont">${dispNum(f.n)}</span> ${elName(f.el).toLowerCase()}</span>
+              <span class="hint grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(entryFor(f.n)[f.el])}</span>
+              <button class="btn small quiet" data-act="lib-edit" data-n="${f.n}">${tr('Bewerk', 'Edit')}</button>
+            </div>`).join('')}
+          ${flags.length > 6 ? `<div class="hint">+ ${tr('nog', 'another')} ${flags.length - 6} ${tr('andere', 'more')}</div>` : ''}
+        </div>` : ''}
+      <div class="card stack" style="gap:12px">
+        <div class="label">${tr('Gemiddelde reactietijd per week', 'Average reaction time per week')}</div>
+        ${total ? `<div class="bars">${bars.map((b, i) => `<div class="b"><i style="height:${Math.round(b/maxBar*100)}%"></i><span>${i === 7 ? tr('nu', 'now') : -(7-i) + 'w'}</span></div>`).join('')}</div>` : `<div class="hint">${tr('Nog geen data.', 'No data yet.')}</div>`}
+      </div>
+      <div class="card stack" style="gap:10px">
+        <div class="label">Data</div>
+        <div class="row" style="gap:10px">
+          <button class="btn quiet small grow" data-act="export">${tr('Backup maken', 'Create backup')}</button>
+          <button class="btn quiet small grow" data-act="import">${tr('Backup terugzetten', 'Restore backup')}</button>
+        </div>
+        <button class="btn quiet small" data-act="reset-stats" style="color:var(--bad)">${tr('Wis alle statistieken', 'Clear all statistics')}</button>
+      </div>
+    </div>`;
+}
+
+/* ================= modal helpers ================= */
+function openModal(html){
+  const m = $('#modal');
+  m.innerHTML = `<div class="scrim" data-act="modal-close"></div><div class="sheet">${html}</div>`;
+  m.hidden = false;
+}
+function closeModal(){ $('#modal').hidden = true; $('#modal').innerHTML = '' }
+function confirmModal(msg, actLabel, act, data){
+  openModal(`
+    <h2>${tr('Weet je het zeker?', 'Are you sure?')}</h2>
+    <div class="stack">
+      <div class="hint">${msg}</div>
+      <button class="btn" data-act="${act}" ${data || ''} style="background:var(--bad);color:#fff">${actLabel}</button>
+      <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
+    </div>`);
+}
+
+/* library edit sheet */
+function openLibEdit(n){
+  const e = entryFor(n);
+  const head = isCard(n)
+    ? `<span class="numfont" ${cardMeta(n).red ? 'style="color:var(--bad-ink)"' : ''}>${cardMeta(n).label}</span> · ${esc(cardName(n))}`
+    : `<span class="numfont">${pad2(n)}</span> · ${esc(e.code)}`;
+  openModal(`
+    <h2>${head}</h2>
+    <div class="stack">
+      ${ELS.map(el => `
+        <div>
+          <div class="label" style="margin-bottom:6px;color:var(--${el})">${elName(el)}</div>
+          <input class="field" id="ed-${el}" value="${esc(e[el])}">
+        </div>`).join('')}
+      <div>
+        <div class="label" style="margin-bottom:6px">${tr('Foto', 'Photo')}</div>
+        <div class="photorow">
+          ${IMGURL.has(n) ? `<img src="${IMGURL.get(n)}" alt="">` : ''}
+          <label class="btn quiet small filebtn" style="flex:none">${IMGURL.has(n) ? tr('Vervang foto', 'Replace photo') : tr('Foto toevoegen', 'Add photo')}<input type="file" accept="image/*" id="ed-img" data-n="${n}"></label>
+          ${IMGURL.has(n) ? `<button class="btn quiet small" data-act="img-del" data-n="${n}" style="color:var(--bad)">${tr('Verwijder', 'Delete')}</button>` : ''}
+        </div>
+        <div class="hint" style="margin-top:6px">${tr("Wordt direct verkleind opgeslagen (±50 KB). Foto's zitten alleen in de bestands-backup, niet in de tekst-backup.", 'Stored immediately at reduced size (±50 KB). Photos are only included in the file backup, not the text backup.')}</div>
+      </div>
+      <div class="row">
+        <div class="grow">${tr('Niet meer tonen in randomiser', 'Hide from randomizer')} <div class="hint">${tr('voor items die je al vlekkeloos kent', 'for items you already know flawlessly')}</div></div>
+        <label class="tgl"><input type="checkbox" id="ed-excl" ${e.excluded ? 'checked' : ''}><span></span></label>
+      </div>
+      <div class="hint">${tr('Als je een element wijzigt, beginnen de statistieken van dat element opnieuw.', 'If you change an element, its statistics start over.')}</div>
+      <button class="btn" data-act="lib-save" data-n="${n}">${tr('Opslaan', 'Save')}</button>
+      <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
+    </div>`);
+}
+
+/* workout editor sheet */
+let WEDIT = null;
+function openWkEdit(w){
+  WEDIT = w ? JSON.parse(JSON.stringify(w)) : {id:'w' + Date.now(), name:'', len:2, dir:'pao', mode:'all', from:0, to:99, digit:0, sel:[], smart:true};
+  renderWkEdit();
+}
+function renderWkEdit(){
+  const w = WEDIT;
+  const modeBtn = (v, t) => `<button class="${w.mode === v ? 'on' : ''}" data-act="we-mode" data-v="${v}">${t}</button>`;
+  let modeUi = '';
+  if(w.mode === 'range') modeUi = `
+    <div class="row"><input class="field" id="we-from" type="number" min="0" max="99" inputmode="numeric" value="${w.from ?? 0}" placeholder="${tr('van', 'from')}"><span class="hint">${tr('t/m', 'to')}</span><input class="field" id="we-to" type="number" min="0" max="99" inputmode="numeric" value="${w.to ?? 99}" placeholder="${tr('tot', 'to')}"></div>`;
+  else if(w.mode === 'first' || w.mode === 'last') modeUi = `
+    <div class="seg" style="flex-wrap:nowrap;overflow-x:auto">${[0,1,2,3,4,5,6,7,8,9].map(d => `<button class="${w.digit === d ? 'on' : ''}" data-act="we-digit" data-v="${d}">${d}</button>`).join('')}</div>
+    <div class="hint">${w.mode === 'first' ? tr(`Alle ${w.digit}0-tallen (${w.digit}0–${w.digit}9)`, `All numbers ${w.digit}0–${w.digit}9`) : tr(`Alle nummers die eindigen op ${w.digit}`, `All numbers ending in ${w.digit}`)}</div>`;
+  else if(w.mode === 'manual') modeUi = `
+    <div class="grid100">${LIST.map(e => `<button class="numfont ${(w.sel || []).includes(e.n) ? 'on' : ''}" data-act="we-cell" data-n="${e.n}">${pad2(e.n)}</button>`).join('')}</div>
+    <div class="row"><button class="btn small quiet" data-act="we-all">${tr('Alles', 'All')}</button><button class="btn small quiet" data-act="we-none">${tr('Niets', 'None')}</button><span class="hint grow" style="text-align:right">${(w.sel || []).length} ${tr('gekozen', 'selected')}</span></div>`;
+  else if(w.mode === 'cards') modeUi = `
+    <div class="hint">${tr('Alle ingevulde speelkaarten uit de Bibliotheek doen mee.', 'All filled-in playing cards from the Library take part.')}</div>`;
+  const isEdit = WORKOUTS.some(x => x.id === w.id);
+  openModal(`
+    <h2>${isEdit ? tr('Workout bewerken', 'Edit workout') : tr('Nieuwe workout', 'New workout')}</h2>
+    <div class="stack">
+      <input class="field" id="we-name" placeholder="${tr('Naam (bijv. Veertigers)', 'Name (e.g. Forties)')}" value="${esc(w.name)}">
+      <div><div class="label" style="margin-bottom:6px">${tr('Cijfers', 'Digits')}</div>
+        <div class="seg">${[2,4,6].map(l => `<button class="${w.len === l ? 'on' : ''}" data-act="we-len" data-v="${l}">${l}</button>`).join('')}</div></div>
+      <div><div class="label" style="margin-bottom:6px">${tr('Richting', 'Direction')}</div>
+        ${w.len === 2
+          ? `<select class="field" id="we-dir">${DIRS.map(([v,t]) => `<option value="${v}" ${w.dir === v ? 'selected' : ''}>${tx(t)}</option>`).join('')}</select>`
+          : `<div class="hint">${tr('Bij 4 en 6 cijfers: getal → scène (persoon · actie · object).', 'With 4 and 6 digits: number → scene (person · action · object).')}</div>`}</div>
+      <div><div class="label" style="margin-bottom:6px">${tr('Tempo (auto-door)', 'Tempo (auto-advance)')}</div>
+        <div class="seg">${[0,5,4,3,2].map(v => `<button class="${(w.tempo || 0) === v ? 'on' : ''}" data-act="we-tempo" data-v="${v}">${v ? v + 's' : tr('Uit', 'Off')}</button>`).join('')}</div></div>
+      <div><div class="label" style="margin-bottom:6px">${tr('Nummers', 'Items')}</div>
+        <div class="seg" style="margin-bottom:10px;flex-wrap:wrap">${modeBtn('all', tr('Alles', 'All'))}${modeBtn('range', tr('Bereik', 'Range'))}${modeBtn('first', tr('Eerste', 'First'))}${modeBtn('last', tr('Laatste', 'Last'))}${modeBtn('manual', tr('Kies', 'Pick'))}${modeBtn('cards', tr('Kaarten', 'Cards'))}</div>
+        ${modeUi}</div>
+      <div class="row">
+        <div class="grow">${tr('Slimme selectie', 'Smart selection')} <div class="hint">${tr('zwakke & vervallen nummers vaker', 'weak & due items more often')}</div></div>
+        <label class="tgl"><input type="checkbox" id="we-smart" ${w.smart ? 'checked' : ''}><span></span></label>
+      </div>
+      <div class="hint">${poolFor(w).length} ${tr('items in selectie', 'items in selection')}</div>
+      <button class="btn" data-act="we-save">${tr('Opslaan', 'Save')}</button>
+      ${isEdit ? `<button class="btn quiet" data-act="wk-del" data-id="${w.id}" style="color:var(--bad)">${tr('Verwijder workout', 'Delete workout')}</button>` : ''}
+      <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
+    </div>`);
+}
+function readWkForm(){
+  const w = WEDIT;
+  const name = $('#we-name'); if(name) w.name = name.value.trim();
+  const dir = $('#we-dir'); if(dir) w.dir = dir.value;
+  const f = $('#we-from'), t = $('#we-to');
+  if(f) w.from = Math.max(0, Math.min(99, +f.value || 0));
+  if(t) w.to = Math.max(0, Math.min(99, +t.value || 0));
+  if(w.from > w.to){ const tmp = w.from; w.from = w.to; w.to = tmp }
+  const sm = $('#we-smart'); if(sm) w.smart = sm.checked;
+}
+
+/* export / import */
+function openExport(){
+  const data = JSON.stringify({v:1, list:LIST, cards:CARDS, log:LOG, workouts:WORKOUTS, srs:SRS, settings:SET});
+  openModal(`
+    <h2>Backup</h2>
+    <div class="stack">
+      <div class="hint">${tr("Kopieer deze tekst en bewaar hem (bijv. in Notities). Hiermee zet je alles — lijst, kaarten, workouts en statistieken — terug. Foto's zitten er niet in; gebruik daarvoor de bestands-backup hieronder.", 'Copy this text and keep it safe (e.g. in Notes). It restores everything — list, cards, workouts and statistics. Photos are not included; use the file backup below for those.')}</div>
+      <textarea class="field" id="exp-txt" rows="6" readonly style="font-size:12px">${esc(data)}</textarea>
+      <button class="btn" data-act="exp-copy">${tr('Kopieer naar klembord', 'Copy to clipboard')}</button>
+      <button class="btn quiet" data-act="exp-file">${tr("Download bestands-backup (incl. foto's)", 'Download file backup (incl. photos)')}</button>
+      <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
+    </div>`);
+}
+async function exportFile(){
+  const images = {};
+  for(const n of IMGURL.keys()){
+    try{
+      const blob = await idbReq('readonly', s => s.get(n));
+      if(blob) images[n] = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob) });
+    }catch(e){}
+  }
+  const data = JSON.stringify({v:1, list:LIST, cards:CARDS, log:LOG, workouts:WORKOUTS, srs:SRS, settings:SET, images});
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pao-backup.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  toast(tr('Backup gedownload', 'Backup downloaded'));
+}
+function openImport(){
+  openModal(`
+    <h2>${tr('Backup terugzetten', 'Restore backup')}</h2>
+    <div class="stack">
+      <div class="hint">${tr('Plak hier een eerder gemaakte tekst-backup, of kies een gedownload backup-bestand. Dit overschrijft de huidige data.', 'Paste a previously made text backup here, or choose a downloaded backup file. This overwrites the current data.')}</div>
+      <textarea class="field" id="imp-txt" rows="6" placeholder="${tr('Plak backup-tekst', 'Paste backup text')}"></textarea>
+      <button class="btn" data-act="imp-apply">${tr('Terugzetten', 'Restore')}</button>
+      <label class="btn quiet filebtn">${tr("Herstel uit bestand (incl. foto's)", 'Restore from file (incl. photos)')}<input type="file" accept=".json,application/json" id="imp-file"></label>
+      <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
+    </div>`);
+}
+async function applyBackup(d){
+  if(!d.list || !Array.isArray(d.list) || d.list.length !== 100) throw new Error('bad');
+  LIST = d.list; LOG = d.log || []; WORKOUTS = d.workouts || []; SRS = d.srs || {};
+  if(d.cards && Array.isArray(d.cards) && d.cards.length === 52){ CARDS = d.cards; saveCards() }
+  SET = Object.assign(SET, d.settings || {});
+  saveList(); saveLog(); saveWk(); saveSrs(); saveSet();
+  if(d.images && IDB){
+    for(const k in d.images){
+      try{ await imgSet(+k, dataURLtoBlob(d.images[k])) }catch(e){}
+    }
+  }
+  applyTheme(); closeModal(); render(); toast(tr('Backup teruggezet', 'Backup restored'));
+}
+
+/* ================= actions ================= */
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act]');
+  if(!t) return;
+  const act = t.dataset.act;
+
+  if(act === 'tab'){ TAB = t.dataset.tab; STATSEL = null; render(); return }
+  if(act === 'theme'){ SET.theme = t.dataset.v; saveSet(); applyTheme(); render(); return }
+  if(act === 'lang'){ SET.lang = t.dataset.v; saveSet(); render(); return }
+  if(act === 'libsrc'){ LIBSRC = t.dataset.v; render(); return }
+  if(act === 'wiz-open'){ openWizard(); return }
+  if(act === 'wiz-new'){ wizStart(false); return }
+  if(act === 'wiz-resume'){ wizStart(true); return }
+  if(act === 'wiz-prev'){ wizSaveFields(); if(WZ.i > 0) WZ.i--; wizRender(); return }
+  if(act === 'wiz-next'){ wizSaveFields(); if(WZ.i === 99){ wizFinishScreen() } else { WZ.i++; wizRender() } return }
+  if(act === 'wiz-pause'){ wizSaveFields(); WZ = null; closeModal(); toast(tr('Concept bewaard', 'Draft saved')); return }
+  if(act === 'wiz-apply'){ wizApply(); return }
+  if(act === 'bulk-open'){ openBulk(t.dataset.kind); return }
+  if(act === 'bulk-apply'){ applyBulk(t.dataset.kind); return }
+  if(act === 'sync-setup'){
+    openModal(`
+      <h2>Cloud-sync</h2>
+      <div class="stack">
+        <div class="hint" style="line-height:1.5">${tr('Je gegevens worden opgeslagen onder een geheime synccode. Bewaar die code goed (bijv. in Notities): met dezelfde code koppel je een ander apparaat — en zonder code kun je er niet meer bij.', 'Your data is stored under a secret sync code. Keep that code safe (e.g. in Notes): the same code links another device — and without it you cannot access your data.')}</div>
+        <button class="btn" data-act="sync-new">${tr('Maak een nieuwe synccode', 'Create a new sync code')}</button>
+        <div class="divider"></div>
+        <input class="field" id="sync-code-in" placeholder="PAO-XXXX-XXXX-XXXX" autocapitalize="characters">
+        <button class="btn quiet" data-act="sync-link">${tr('Koppel met bestaande code', 'Link with existing code')}</button>
+        <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
+      </div>`);
+    return;
+  }
+  if(act === 'sync-new'){
+    const code = genSyncCode();
+    SET.syncCode = code; SET.syncOn = true; SET.lastSync = null; SET.syncDirty = true; saveSet();
+    syncReq('PUT', {payload: syncPayload()}).then(d => {
+      SET.lastSync = d.updated_at; SET.syncDirty = false; saveSet();
+      closeModal(); render();
+      openModal(`
+        <h2>${tr('Sync staat aan', 'Sync is on')}</h2>
+        <div class="stack">
+          <div class="hint">${tr('Dit is je synccode — bewaar hem nu ergens veilig:', 'This is your sync code — store it somewhere safe now:')}</div>
+          <div class="numfont" style="font-size:22px;font-weight:800;text-align:center;letter-spacing:.04em">${esc(code)}</div>
+          <button class="btn" data-act="sync-copy">${tr('Kopieer code', 'Copy code')}</button>
+          <button class="btn quiet" data-act="modal-close">${tr('Klaar', 'Done')}</button>
+        </div>`);
+    }).catch(() => {
+      SET.syncOn = false; SET.syncCode = ''; SET.syncDirty = false; saveSet();
+      cloudOnlyModal();
+    });
+    return;
+  }
+  if(act === 'sync-link'){
+    const inp = $('#sync-code-in');
+    const code = (inp ? inp.value : '').trim().toUpperCase();
+    if(code.length < 12){ toast(tr('Vul een geldige code in', 'Enter a valid code')); return }
+    SET.syncCode = code; SET.syncOn = true; SET.lastSync = null; saveSet();
+    syncReq('GET').then(d => {
+      if(d && d.payload){
+        applySyncPayload(d.payload);
+        SET.lastSync = d.updated_at; SET.syncDirty = false; saveSet();
+        closeModal(); render(); toast(tr('Gekoppeld — gegevens opgehaald', 'Linked — data pulled'));
+      } else {
+        SET.syncOn = false; SET.syncCode = ''; saveSet();
+        toast(tr('Geen data gevonden voor deze code', 'No data found for this code'));
+      }
+    }).catch(() => {
+      SET.syncOn = false; SET.syncCode = ''; saveSet();
+      cloudOnlyModal();
+    });
+    return;
+  }
+  if(act === 'sync-now'){ syncPull(true); return }
+  if(act === 'sync-off'){
+    SET.syncOn = false; SET.syncDirty = false; saveSet(); render();
+    toast(tr('Sync uit — je data blijft lokaal staan', 'Sync off — your data stays local'));
+    return;
+  }
+  if(act === 'sync-copy'){
+    try{ navigator.clipboard.writeText(SET.syncCode).then(() => toast(tr('Code gekopieerd', 'Code copied'))) }catch(e){}
+    return;
+  }
+  if(act === 'cloud-copy'){
+    try{ navigator.clipboard.writeText(CLOUD_URL).then(() => toast(tr('Link gekopieerd', 'Link copied'))) }catch(e){}
+    return;
+  }
+  if(act === 'qlen'){ SET.qLen = +t.dataset.v; if(SET.qLen > 2) SET.qDir = 'pao'; saveSet(); render(); return }
+  if(act === 'qtimer'){ SET.qTimer = +t.dataset.v; saveSet(); render(); return }
+  if(act === 'qtempo'){ SET.qTempo = +t.dataset.v; saveSet(); render(); return }
+  if(act === 'start-seq'){
+    const sel = $('#seqlevel'); if(sel){ SET.seqLevel = +sel.value; saveSet() }
+    startSeq(SET.seqLevel); return;
+  }
+  if(act === 'seq-torecall'){
+    Q.memMs = Date.now() - Q.phaseStart;
+    Q.phase = 'rec'; Q.phaseStart = Date.now();
+    renderSeq(); return;
+  }
+  if(act === 'seq-key'){
+    const k = t.dataset.k;
+    if(k === 'back') Q.input.pop();
+    else if(k === 'ok'){ if(Q.input.length === Q.level) seqFinish() }
+    else if(Q.input.length < Q.level) Q.input.push(+k);
+    renderSeq(); return;
+  }
+  if(act === 'seq-again'){
+    const lv = +t.dataset.level;
+    SET.seqLevel = lv; saveSet();
+    if(Q && Q.clock) clearInterval(Q.clock);
+    startSeq(lv); return;
+  }
+  if(act === 'ath-open'){ openAthlete(t.dataset.id); return }
+  if(act === 'ath-start'){
+    const a = ATHLETES.find(x => x.id === t.dataset.id);
+    const action = a && a.actions[+t.dataset.i];
+    if(!action) return;
+    closeModal();
+    if(action.seq) startSeq(SET.seqLevel);
+    else startSession({...action.w});
+    return;
+  }
+
+  if(act === 'start-quick'){
+    const dirSel = $('#qdir'); if(dirSel){ SET.qDir = dirSel.value; saveSet() }
+    startSession({id:'quick', name:'Snelle training', mode:'all', len:SET.qLen, dir:SET.qLen > 2 ? 'pao' : SET.qDir, smart:false, limit:SET.qTimer || 0, tempo:SET.qTempo || 0});
+    return;
+  }
+  if(act === 'start-rec'){
+    const nums = t.dataset.nums.split(',').map(Number);
+    startSession({id:'rec', name:'Aanbevolen', mode:'manual', sel:nums, len:2, dir:t.dataset.dir, smart:true});
+    return;
+  }
+  if(act === 'train-focus'){
+    const nums = t.dataset.nums.split(',').map(Number);
+    closeModal();
+    startSession({id:'focus', name:'Gerichte training', mode:'manual', sel:nums, len:2, dir:'pao', smart:false});
+    return;
+  }
+
+  if(act === 'wk-play'){
+    const w = BUILTIN.find(x => x.id === t.dataset.id) || WORKOUTS.find(x => x.id === t.dataset.id);
+    if(w) startSession(w);
+    return;
+  }
+  if(act === 'wk-new'){ openWkEdit(null); return }
+  if(act === 'wk-edit'){ const w = WORKOUTS.find(x => x.id === t.dataset.id); if(w) openWkEdit(w); return }
+  if(act === 'wk-del'){
+    WORKOUTS = WORKOUTS.filter(x => x.id !== t.dataset.id);
+    saveWk(); closeModal(); render(); toast(tr('Workout verwijderd', 'Workout deleted')); return;
+  }
+  if(act === 'we-mode'){ readWkForm(); WEDIT.mode = t.dataset.v; renderWkEdit(); return }
+  if(act === 'we-len'){ readWkForm(); WEDIT.len = +t.dataset.v; if(WEDIT.len > 2) WEDIT.dir = 'pao'; renderWkEdit(); return }
+  if(act === 'we-digit'){ readWkForm(); WEDIT.digit = +t.dataset.v; renderWkEdit(); return }
+  if(act === 'we-tempo'){ readWkForm(); WEDIT.tempo = +t.dataset.v; renderWkEdit(); return }
+  if(act === 'we-cell'){
+    readWkForm();
+    const n = +t.dataset.n; WEDIT.sel = WEDIT.sel || [];
+    WEDIT.sel = WEDIT.sel.includes(n) ? WEDIT.sel.filter(x => x !== n) : [...WEDIT.sel, n];
+    renderWkEdit(); return;
+  }
+  if(act === 'we-all'){ readWkForm(); WEDIT.sel = LIST.map(e => e.n); renderWkEdit(); return }
+  if(act === 'we-none'){ readWkForm(); WEDIT.sel = []; renderWkEdit(); return }
+  if(act === 'we-save'){
+    readWkForm();
+    if(!WEDIT.name) WEDIT.name = 'Workout ' + (WORKOUTS.length + 1);
+    if(!poolFor(WEDIT).length){ toast(tr('Selectie bevat geen items', 'Selection contains no items')); return }
+    const i = WORKOUTS.findIndex(x => x.id === WEDIT.id);
+    if(i >= 0) WORKOUTS[i] = WEDIT; else WORKOUTS.push(WEDIT);
+    saveWk(); closeModal(); TAB = 'workouts'; render(); toast(tr('Workout opgeslagen', 'Workout saved')); return;
+  }
+
+  if(act === 'lib-edit'){ openLibEdit(+t.dataset.n); return }
+  if(act === 'lib-save'){
+    const n = +t.dataset.n; const e = entryFor(n); const now = Date.now();
+    for(const el of ELS){
+      const v = $('#ed-' + el).value.trim();
+      if(v !== e[el] && (v || isCard(n))){
+        e[el] = v;
+        if(el === 'p') e.editP = now; if(el === 'a') e.editA = now; if(el === 'o') e.editO = now;
+        delete SRS[n + ':' + el];
+      }
+    }
+    e.excluded = $('#ed-excl').checked;
+    if(isCard(n)) saveCards(); else saveList();
+    saveSrs(); closeModal(); render(); toast(tr('Opgeslagen', 'Saved')); return;
+  }
+
+  if(act === 'stat-cell'){ STATSEL = STATSEL === +t.dataset.n ? null : +t.dataset.n; render(); return }
+  if(act === 'export'){ openExport(); return }
+  if(act === 'exp-copy'){
+    const ta = $('#exp-txt'); ta.select(); ta.setSelectionRange(0, 999999);
+    const copied = tr('Gekopieerd', 'Copied');
+    try{
+      navigator.clipboard.writeText(ta.value).then(() => toast(copied), () => { document.execCommand('copy'); toast(copied) });
+    }catch(e){ document.execCommand('copy'); toast(copied) }
+    return;
+  }
+  if(act === 'import'){ openImport(); return }
+  if(act === 'exp-file'){ exportFile().catch(() => toast(tr('Backup maken mislukt', 'Creating backup failed'))); return }
+  if(act === 'imp-apply'){
+    try{
+      const d = JSON.parse($('#imp-txt').value);
+      applyBackup(d).catch(() => toast(tr('Ongeldige backup', 'Invalid backup')));
+    }catch(e){ toast(tr('Ongeldige backup-tekst', 'Invalid backup text')) }
+    return;
+  }
+  if(act === 'img-del'){
+    const n = +t.dataset.n;
+    imgDel(n).then(() => { openLibEdit(n); toast(tr('Foto verwijderd', 'Photo deleted')) }).catch(() => toast(tr('Verwijderen mislukt', 'Delete failed')));
+    return;
+  }
+  if(act === 'reset-stats'){
+    confirmModal(tr('Alle trainingsgeschiedenis en sterktescores worden gewist. Je lijst en workouts blijven staan.', 'All training history and strength scores will be erased. Your list and workouts remain.'), tr('Wis statistieken', 'Clear statistics'), 'reset-stats-do');
+    return;
+  }
+  if(act === 'reset-stats-do'){
+    LOG = []; SRS = {}; saveLog(); saveSrs(); closeModal(); render(); toast(tr('Statistieken gewist', 'Statistics cleared')); return;
+  }
+
+  if(act === 'sess-ok'){ sessGreen(); return }
+  if(act === 'sess-bad'){ sessRed(); return }
+  if(act === 'sess-stop'){ if(Q) stopSeq(); else endSession(); return }
+  if(act === 'sess-audio'){ SET.audio = !SET.audio; saveSet(); renderSession(); return }
+  if(act === 'modal-close'){ closeModal(); return }
+});
+document.addEventListener('input', ev => {
+  if(ev.target.id === 'bulk-txt'){ bulkPreview(ev.target.dataset.bulk); return }
+  if(ev.target.id === 'libsearch'){ LIBQ = ev.target.value;
+    // re-render list only, keep focus
+    const val = LIBQ; render();
+    const s = $('#libsearch'); if(s){ s.focus(); s.value = val; s.setSelectionRange(val.length, val.length) }
+  }
+});
+document.addEventListener('change', ev => {
+  if(ev.target.id === 'ed-img'){
+    const n = +ev.target.dataset.n; const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    resizeImage(f).then(b => imgSet(n, b))
+      .then(() => { openLibEdit(n); toast(tr('Foto opgeslagen', 'Photo saved')) })
+      .catch(() => toast(tr('Foto opslaan mislukt', 'Saving photo failed')));
+    return;
+  }
+  if(ev.target.id === 'bulk-file'){
+    const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    const kind = ev.target.dataset.kind;
+    f.text().then(txt => { const ta = $('#bulk-txt'); if(ta){ ta.value = txt; bulkPreview(kind) } })
+      .catch(() => toast(tr('Bestand lezen mislukt', 'Reading file failed')));
+    return;
+  }
+  if(ev.target.id === 'imp-file'){
+    const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    f.text().then(txt => applyBackup(JSON.parse(txt))).catch(() => toast(tr('Ongeldig backup-bestand', 'Invalid backup file')));
+    return;
+  }
+  const ex = ev.target.closest('input[data-act="lib-excl"]');
+  if(ex){
+    const n = +ex.dataset.n;
+    entryFor(n).excluded = !ex.checked;
+    if(isCard(n)) saveCards(); else saveList();
+    const v = $('#view'); const sc = v.scrollTop;
+    render(); v.scrollTop = sc;
+    return;
+  }
+  if(ev.target.closest('[data-act="audio"]')){ SET.audio = ev.target.checked; saveSet(); if(SET.audio) speak(tr('Audio aan', 'Audio on')) }
+});
+
+applyTheme();
+render();
+imgLoadAll().then(() => { if(IMGURL.size && !S) render() });
+if(SET.syncOn && SET.syncCode) setTimeout(() => syncPull(false), 600);
+</script>
