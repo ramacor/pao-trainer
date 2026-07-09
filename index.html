@@ -117,8 +117,8 @@
   /* toggle */
   .tgl{position:relative;width:48px;height:29px;flex:none}
   .tgl input{position:absolute;opacity:0;width:100%;height:100%;margin:0}
-  .tgl span{position:absolute;inset:0;border-radius:99px;background:var(--surface2);transition:background .15s}
-  .tgl span::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+  .tgl span{position:absolute;inset:0;border-radius:99px;background:var(--surface2);border:1px solid var(--line);transition:background .15s}
+  .tgl span::after{content:"";position:absolute;top:2px;left:2px;width:23px;height:23px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform .15s}
   .tgl input:checked + span{background:var(--accent)}
   .tgl input:checked + span::after{transform:translateX(19px)}
   @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
@@ -152,6 +152,9 @@
   #btn-ok{background:var(--ok)} #btn-ok:active{background:var(--ok-press)} #btn-ok svg{stroke:var(--ok-glyph)}
   #btn-ok .cont{display:none;color:var(--ok-glyph);font-weight:800;font-size:17px;margin-left:6px}
   #session.answering #btn-ok .cont{display:block}
+
+  .gearbtn{width:38px;height:38px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--ink2);flex:none}
+  .gearbtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
 
   /* ---------- tempo ---------- */
   .tempobar{width:min(70vw,320px);height:4px;border-radius:99px;background:var(--surface2);overflow:hidden}
@@ -359,7 +362,7 @@ function markDirty(){
   if(SYNCAPPLYING || !SET.syncOn || !SET.syncCode) return;
   if(!SET.syncDirty){ SET.syncDirty = true; saveSet() }
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => syncPush(), 6000);
+  syncTimer = setTimeout(() => syncPush(), 2500);
 }
 function syncPayload(){ return {v:1, list:LIST, cards:CARDS, log:LOG, workouts:WORKOUTS, srs:SRS, seq:seqHist()} }
 async function syncReq(method, body){
@@ -386,17 +389,108 @@ async function syncPull(interactive){
   syncBusy = true;
   try{
     const d = await syncReq('GET');
-    if(d && d.payload && new Date(d.updated_at).getTime() !== new Date(SET.lastSync || 0).getTime()){
-      applySyncPayload(d.payload);
-      SET.lastSync = d.updated_at; SET.syncDirty = false; saveSet();
-      render();
-      if(interactive) toast(tr('Gegevens opgehaald uit de cloud', 'Data pulled from the cloud'));
-    } else if(SET.syncDirty){
-      syncBusy = false; await syncPush(); return;
-    } else if(interactive) toast(tr('Alles is al gelijk', 'Everything already in sync'));
+    if(d && d.payload){
+      const changedLocal = mergeFromRemote(d.payload);
+      const merged = syncPayload();
+      const differs = JSON.stringify(merged) !== JSON.stringify(d.payload);
+      if(changedLocal && !S && !Q) render();
+      if(differs){
+        const res = await syncReq('PUT', {payload: merged});
+        SET.lastSync = res.updated_at;
+      } else {
+        SET.lastSync = d.updated_at;
+      }
+      SET.syncDirty = false; saveSet();
+      if(interactive) toast(changedLocal ? tr('Gesynchroniseerd — wijzigingen opgehaald', 'Synced — changes pulled') : tr('Gesynchroniseerd', 'Synced'));
+    } else {
+      syncBusy = false; await syncPush();
+      if(interactive) toast(tr('Gesynchroniseerd', 'Synced'));
+      return;
+    }
     syncStatus();
   }catch(e){ if(interactive) toast(tr('Sync niet bereikbaar', 'Sync unreachable')) }
   syncBusy = false;
+}
+/* merge: per onderdeel het nieuwste behouden i.p.v. alles overschrijven */
+function mergeFromRemote(p){
+  SYNCAPPLYING = true;
+  let changed = false;
+  try{
+    if(Array.isArray(p.list) && p.list.length === 100){
+      if(mergeEntryArr(LIST, p.list, false)) changed = true;
+      LS.set('paoList', LIST);
+    }
+    if(Array.isArray(p.cards) && p.cards.length === 52){
+      if(mergeEntryArr(CARDS, p.cards, true)) changed = true;
+      LS.set('paoCards', CARDS);
+    }
+    if(Array.isArray(p.log)){
+      const key = x => `${x.ts}|${x.n}|${x.el}|${x.dir}|${x.ms}|${x.ok}`;
+      const have = new Set(LOG.map(key));
+      const add = p.log.filter(x => !have.has(key(x)));
+      if(add.length){
+        LOG = LOG.concat(add).sort((a, b) => a.ts - b.ts);
+        if(LOG.length > 6000) LOG = LOG.slice(-6000);
+        LS.set('paoLog', LOG); changed = true;
+      }
+    }
+    if(Array.isArray(p.workouts)){
+      let ch = false;
+      for(const rw of p.workouts){
+        const i = WORKOUTS.findIndex(w => w.id === rw.id);
+        if(i < 0){ WORKOUTS.push(rw); ch = true }
+        else if(JSON.stringify(WORKOUTS[i]) !== JSON.stringify(rw)){ WORKOUTS[i] = rw; ch = true }
+      }
+      if(ch){ LS.set('paoWorkouts', WORKOUTS); changed = true }
+    }
+    if(p.srs && typeof p.srs === 'object'){
+      let ch = false;
+      const score = e => (e && (e.t || e.due)) || 0;
+      for(const k in p.srs){
+        if(!SRS[k] || score(p.srs[k]) > score(SRS[k])){ SRS[k] = p.srs[k]; ch = true }
+      }
+      if(ch){ LS.set('paoSrs', SRS); changed = true }
+    }
+    if(Array.isArray(p.seq)){
+      const h = seqHist();
+      const have = new Set(h.map(x => x.ts));
+      const add = p.seq.filter(x => !have.has(x.ts));
+      if(add.length){
+        LS.set('paoSeq', h.concat(add).sort((a, b) => a.ts - b.ts).slice(-200));
+        changed = true;
+      }
+    }
+  } finally { SYNCAPPLYING = false }
+  return changed;
+}
+function mergeEntryArr(loc, rem, isCards){
+  let changed = false;
+  const editKey = {p:'editP', a:'editA', o:'editO'};
+  for(let i = 0; i < loc.length; i++){
+    const l = loc[i], r = rem[i];
+    if(!r) continue;
+    for(const el of ELS){
+      const k = editKey[el];
+      const lt = l[k] || 0, rt = r[k] || 0;
+      const rv = r[el] ?? '';
+      if(rt > lt){
+        if(l[el] !== rv){ l[el] = rv; changed = true }
+        l[k] = rt;
+      } else if(rt === lt && l[el] !== rv){
+        // geen tijdstempels: neem remote alleen als lokaal nog de fabriekswaarde heeft
+        const def = isCards ? '' : (SEED[i] ? SEED[i][el] : '');
+        if(l[el] === def && rv !== def){ l[el] = rv; changed = true }
+      }
+    }
+    const lx = l.exT || 0, rx = r.exT || 0;
+    if(rx > lx){
+      if(!!l.excluded !== !!r.excluded){ l.excluded = !!r.excluded; changed = true }
+      l.exT = rx;
+    } else if(rx === lx && r.excluded && !l.excluded){
+      l.excluded = true; changed = true;
+    }
+  }
+  return changed;
 }
 function applySyncPayload(p){
   SYNCAPPLYING = true;
@@ -565,6 +659,7 @@ function srsUpdate(n, el, ok){
     e.streak = 0;
     e.due = Date.now() + 5*60e3;
   }
+  e.t = Date.now();
   SRS[k] = e;
 }
 
@@ -1284,7 +1379,8 @@ const ICONS = {
   train:'<svg viewBox="0 0 24 24"><path d="M8 6.5v11l9-5.5-9-5.5z"/></svg>',
   workouts:'<svg viewBox="0 0 24 24"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/></svg>',
   lib:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
-  stats:'<svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></svg>'
+  stats:'<svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></svg>',
+  gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9"/></svg>'
 };
 let TAB = 'train';
 let LIBQ = '';
@@ -1322,7 +1418,10 @@ function viewTrain(){
     recCard = `<div class="card hint">${tr('Nog te weinig data voor een aanbeveling — train eerst een paar rondes.', 'Not enough data for a recommendation yet — train a few rounds first.')}</div>`;
   }
   return `
-    <h1>PAO Trainer</h1>
+    <div class="row" style="margin-bottom:14px">
+      <h1 class="grow" style="margin:0">PAO Trainer</h1>
+      <button class="gearbtn" data-act="settings" aria-label="${tr('Instellingen', 'Settings')}">${ICONS.gear}</button>
+    </div>
     <div class="stack">
       <div class="card stack" style="gap:12px">
         <div class="label">${tr('Snelle training', 'Quick training')}</div>
@@ -1346,35 +1445,38 @@ function viewTrain(){
         ${(() => { const fl = seqHist().filter(h => h.flawless); const best = fl.reduce((m, h) => Math.max(m, h.level), 0); return best ? `<div class="hint">${tr('Record', 'Best')}: ${best} ${tr('cijfers foutloos.', 'digits flawless.')}</div>` : '' })()}
         <button class="btn" data-act="start-seq">${tr('Start reeks-proef', 'Start sequence test')}</button>
       </div>
-      <div class="card stack" style="gap:14px">
-        <div class="label">${tr('Instellingen', 'Settings')}</div>
-        <div class="row">
-          <div class="grow">${tr('Weergave', 'Appearance')}</div>
-          <div class="seg" style="flex:none;width:210px">${[['auto','Auto'],['light', tr('Licht', 'Light')],['dark', tr('Donker', 'Dark')]].map(([v,t]) => `<button class="${SET.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}">${t}</button>`).join('')}</div>
-        </div>
-        <div class="row">
-          <div class="grow">${tr('Taal', 'Language')}</div>
-          <div class="seg" style="flex:none;width:210px">${[['nl','Nederlands'],['en','English']].map(([v,t]) => `<button class="${SET.lang === v ? 'on' : ''}" data-act="lang" data-v="${v}">${t}</button>`).join('')}</div>
-        </div>
-        <div class="row">
-          <div class="grow">Audio <span class="hint">— ${tr('leest het nummer voor, handig in het donker', 'reads the number aloud, handy in the dark')}</span></div>
-          <label class="tgl"><input type="checkbox" data-act="audio" ${SET.audio ? 'checked' : ''}><span></span></label>
-        </div>
-      </div>
-      <div class="card stack" style="gap:10px">
-        <div class="label">Cloud-sync</div>
-        ${SET.syncOn && SET.syncCode ? `
-          <div class="hint">${tr('Je gegevens (lijst, kaarten, statistieken, workouts) synchroniseren automatisch. Foto\\u2019s niet.', 'Your data (list, cards, statistics, workouts) syncs automatically. Photos excluded.')}</div>
-          <div class="row"><span class="numfont" style="font-weight:700;letter-spacing:.05em">${esc(SET.syncCode)}</span><span class="grow"></span><button class="btn small quiet" data-act="sync-copy">${tr('Kopieer', 'Copy')}</button></div>
-          <div class="hint" id="sync-status">${SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL') : ''}</div>
-          <div class="row" style="gap:10px">
-            <button class="btn quiet small grow" data-act="sync-now">${tr('Nu synchroniseren', 'Sync now')}</button>
-            <button class="btn quiet small grow" data-act="sync-off" style="color:var(--bad-ink)">${tr('Zet uit', 'Turn off')}</button>
-          </div>` : `
-          <div class="hint">${tr('Bewaar je voortgang in de cloud en train op meerdere apparaten met één synccode.', 'Keep your progress in the cloud and train on multiple devices with one sync code.')}</div>
-          <button class="btn" data-act="sync-setup">${tr('Zet cloud-sync aan', 'Enable cloud sync')}</button>`}
-      </div>
     </div>`;
+}
+function openSettings(){
+  openModal(`
+    <div id="settings-sheet" class="stack">
+      <h2 style="margin:0">${tr('Instellingen', 'Settings')}</h2>
+      <div class="row">
+        <div class="grow">${tr('Weergave', 'Appearance')}</div>
+        <div class="seg" style="flex:none;width:200px">${[['auto','Auto'],['light', tr('Licht', 'Light')],['dark', tr('Donker', 'Dark')]].map(([v,t]) => `<button class="${SET.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}">${t}</button>`).join('')}</div>
+      </div>
+      <div class="row">
+        <div class="grow">${tr('Taal', 'Language')}</div>
+        <div class="seg" style="flex:none;width:200px">${[['nl','Nederlands'],['en','English']].map(([v,t]) => `<button class="${SET.lang === v ? 'on' : ''}" data-act="lang" data-v="${v}">${t}</button>`).join('')}</div>
+      </div>
+      <div class="row">
+        <div class="grow">Audio <div class="hint">${tr('leest het nummer voor, handig in het donker', 'reads the number aloud, handy in the dark')}</div></div>
+        <label class="tgl"><input type="checkbox" data-act="audio" ${SET.audio ? 'checked' : ''}><span></span></label>
+      </div>
+      <div class="divider"></div>
+      <div class="label">Cloud-sync</div>
+      ${SET.syncOn && SET.syncCode ? `
+        <div class="hint">${tr('Je gegevens (lijst, kaarten, statistieken, workouts) synchroniseren automatisch. Foto’s niet.', 'Your data (list, cards, statistics, workouts) syncs automatically. Photos excluded.')}</div>
+        <div class="row"><span class="numfont" style="font-weight:700;letter-spacing:.05em">${esc(SET.syncCode)}</span><span class="grow"></span><button class="btn small quiet" data-act="sync-copy">${tr('Kopieer', 'Copy')}</button></div>
+        <div class="hint" id="sync-status">${SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL') : ''}</div>
+        <div class="row" style="gap:10px">
+          <button class="btn quiet small grow" data-act="sync-now">${tr('Nu synchroniseren', 'Sync now')}</button>
+          <button class="btn quiet small grow" data-act="sync-off" style="color:var(--bad-ink)">${tr('Zet uit', 'Turn off')}</button>
+        </div>` : `
+        <div class="hint">${tr('Bewaar je voortgang in de cloud en train op meerdere apparaten met één synccode.', 'Keep your progress in the cloud and train on multiple devices with one sync code.')}</div>
+        <button class="btn" data-act="sync-setup">${tr('Zet cloud-sync aan', 'Enable cloud sync')}</button>`}
+      <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
+    </div>`);
 }
 function wkSpec(w){
   const parts = [`${w.len} ${tr('cijfers', 'digits')}`, dirLabel(w.dir)];
@@ -1548,7 +1650,7 @@ function viewStats(){
           <button class="btn quiet small grow" data-act="export">${tr('Backup maken', 'Create backup')}</button>
           <button class="btn quiet small grow" data-act="import">${tr('Backup terugzetten', 'Restore backup')}</button>
         </div>
-        <button class="btn quiet small" data-act="reset-stats" style="color:var(--bad)">${tr('Wis alle statistieken', 'Clear all statistics')}</button>
+        <button class="btn quiet small" data-act="reset-stats" style="color:var(--bad-ink)">${tr('Wis alle statistieken', 'Clear all statistics')}</button>
       </div>
     </div>`;
 }
@@ -1589,7 +1691,7 @@ function openLibEdit(n){
         <div class="photorow">
           ${IMGURL.has(n) ? `<img src="${IMGURL.get(n)}" alt="">` : ''}
           <label class="btn quiet small filebtn" style="flex:none">${IMGURL.has(n) ? tr('Vervang foto', 'Replace photo') : tr('Foto toevoegen', 'Add photo')}<input type="file" accept="image/*" id="ed-img" data-n="${n}"></label>
-          ${IMGURL.has(n) ? `<button class="btn quiet small" data-act="img-del" data-n="${n}" style="color:var(--bad)">${tr('Verwijder', 'Delete')}</button>` : ''}
+          ${IMGURL.has(n) ? `<button class="btn quiet small" data-act="img-del" data-n="${n}" style="color:var(--bad-ink)">${tr('Verwijder', 'Delete')}</button>` : ''}
         </div>
         <div class="hint" style="margin-top:6px">${tr("Wordt direct verkleind opgeslagen (±50 KB). Foto's zitten alleen in de bestands-backup, niet in de tekst-backup.", 'Stored immediately at reduced size (±50 KB). Photos are only included in the file backup, not the text backup.')}</div>
       </div>
@@ -1645,7 +1747,7 @@ function renderWkEdit(){
       </div>
       <div class="hint">${poolFor(w).length} ${tr('items in selectie', 'items in selection')}</div>
       <button class="btn" data-act="we-save">${tr('Opslaan', 'Save')}</button>
-      ${isEdit ? `<button class="btn quiet" data-act="wk-del" data-id="${w.id}" style="color:var(--bad)">${tr('Verwijder workout', 'Delete workout')}</button>` : ''}
+      ${isEdit ? `<button class="btn quiet" data-act="wk-del" data-id="${w.id}" style="color:var(--bad-ink)">${tr('Verwijder workout', 'Delete workout')}</button>` : ''}
       <button class="btn quiet" data-act="modal-close">${tr('Annuleer', 'Cancel')}</button>
     </div>`);
 }
@@ -1722,8 +1824,9 @@ document.addEventListener('click', ev => {
   const act = t.dataset.act;
 
   if(act === 'tab'){ TAB = t.dataset.tab; STATSEL = null; render(); return }
-  if(act === 'theme'){ SET.theme = t.dataset.v; saveSet(); applyTheme(); render(); return }
-  if(act === 'lang'){ SET.lang = t.dataset.v; saveSet(); render(); return }
+  if(act === 'settings'){ openSettings(); return }
+  if(act === 'theme'){ SET.theme = t.dataset.v; saveSet(); applyTheme(); render(); if($('#settings-sheet')) openSettings(); return }
+  if(act === 'lang'){ SET.lang = t.dataset.v; saveSet(); render(); if($('#settings-sheet')) openSettings(); return }
   if(act === 'libsrc'){ LIBSRC = t.dataset.v; render(); return }
   if(act === 'wiz-open'){ openWizard(); return }
   if(act === 'wiz-new'){ wizStart(false); return }
@@ -1790,6 +1893,7 @@ document.addEventListener('click', ev => {
   if(act === 'sync-now'){ syncPull(true); return }
   if(act === 'sync-off'){
     SET.syncOn = false; SET.syncDirty = false; saveSet(); render();
+    if($('#settings-sheet')) openSettings();
     toast(tr('Sync uit — je data blijft lokaal staan', 'Sync off — your data stays local'));
     return;
   }
@@ -1897,7 +2001,7 @@ document.addEventListener('click', ev => {
         delete SRS[n + ':' + el];
       }
     }
-    e.excluded = $('#ed-excl').checked;
+    if(e.excluded !== $('#ed-excl').checked){ e.excluded = $('#ed-excl').checked; e.exT = now }
     if(isCard(n)) saveCards(); else saveList();
     saveSrs(); closeModal(); render(); toast(tr('Opgeslagen', 'Saved')); return;
   }
@@ -1974,7 +2078,9 @@ document.addEventListener('change', ev => {
   const ex = ev.target.closest('input[data-act="lib-excl"]');
   if(ex){
     const n = +ex.dataset.n;
-    entryFor(n).excluded = !ex.checked;
+    const e = entryFor(n);
+    e.excluded = !ex.checked;
+    e.exT = Date.now();
     if(isCard(n)) saveCards(); else saveList();
     const v = $('#view'); const sc = v.scrollTop;
     render(); v.scrollTop = sc;
@@ -1987,4 +2093,19 @@ applyTheme();
 render();
 imgLoadAll().then(() => { if(IMGURL.size && !S) render() });
 if(SET.syncOn && SET.syncCode) setTimeout(() => syncPull(false), 600);
+document.addEventListener('visibilitychange', () => {
+  if(!SET.syncOn || !SET.syncCode) return;
+  if(document.visibilityState === 'visible'){
+    syncPull(false); // terug in beeld: wijzigingen van andere apparaten ophalen
+  } else if(SET.syncDirty){
+    // app verdwijnt naar de achtergrond: best-effort direct pushen
+    try{
+      fetch(SYNC_URL, {
+        method:'PUT', keepalive:true,
+        headers:{'content-type':'application/json', 'x-sync-code':(SET.syncCode || '').toUpperCase()},
+        body: JSON.stringify({payload: syncPayload()})
+      });
+    }catch(e){}
+  }
+});
 </script>
