@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="PAO Trainer">
 <meta name="theme-color" content="#F4F5F8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
@@ -64,7 +64,7 @@
   .numfont{font-family:ui-rounded,-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums}
 
   #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
-  #view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px 24px;max-width:560px;width:100%;margin:0 auto}
+  #view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top, 0px) + 16px) 16px 24px;max-width:560px;width:100%;margin:0 auto}
 
   /* ---------- tab bar ---------- */
   #tabbar{
