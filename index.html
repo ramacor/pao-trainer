@@ -218,7 +218,10 @@
   .legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
   .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
 
-  .schart{display:flex;gap:3px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .schart{overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .schart-in{position:relative;display:flex;gap:3px;min-width:max-content;padding-right:48px}
+  .hline{position:absolute;left:0;right:0;border-top:2px dashed;pointer-events:none;opacity:.85}
+  .hline span{position:absolute;right:0;top:-14px;font-size:8.5px;font-weight:800;background:var(--surface);padding:0 3px;border-radius:4px}
   .schart .sb{flex:none;width:26px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
   .schart .sb b{font-size:8.5px;font-weight:700;color:var(--ink3)}
   .schart .sb .mk{height:15px;display:flex;align-items:center;justify-content:center;font-size:11px}
@@ -226,8 +229,8 @@
   .schart .sb i{width:100%;border-radius:5px 5px 2px 2px}
   .schart .sb span{font-size:9px;color:var(--ink3);max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bars{display:flex;align-items:flex-end;gap:6px;height:90px}
-  .bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
-  .bars .b i{width:100%;border-radius:6px 6px 3px 3px;background:var(--p);opacity:.75;min-height:3px}
+  .bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+  .bars .b i{width:100%;flex:none;border-radius:6px 6px 3px 3px;background:var(--p);opacity:.75}
   .bars .b span{font-size:10px;color:var(--ink3);font-weight:600}
   .bars .b b{font-size:8.5px;color:var(--ink3);font-weight:700}
 
@@ -277,7 +280,7 @@ if(!LIST || !Array.isArray(LIST) || LIST.length !== 100){
 let LOG = LS.get('paoLog', []);
 let WORKOUTS = LS.get('paoWorkouts', []);
 let SRS = LS.get('paoSrs', {});
-let SET = Object.assign({theme:'auto', audio:false, lang:'nl', qLen:2, qDir:'pao', qTimer:0, qTempo:0, seqLevel:6, syncOn:false, syncCode:'', lastSync:null, syncDirty:false, reminders:[]}, LS.get('paoSettings', {}));
+let SET = Object.assign({theme:'auto', audio:false, lang:'nl', qLen:2, qDir:'pao', qTimer:0, qTempo:0, qTarget:0, seqLevel:6, syncOn:false, syncCode:'', lastSync:null, syncDirty:false, reminders:[], chartAvg:false, chartTarget:false}, LS.get('paoSettings', {}));
 let CARDS = LS.get('paoCards', null);
 if(!CARDS || !Array.isArray(CARDS) || CARDS.length !== 52){
   CARDS = Array.from({length:52}, (_, c) => ({c, p:'', a:'', o:'', excluded:false, editP:0, editA:0, editO:0}));
@@ -974,6 +977,7 @@ function logSession(s, att){
   const h = sessHist();
   h.push({
     ts: s.startedAt, id: s.w.id || '', name: s.w.name || '', len: s.w.len, dir: s.w.dir,
+    target: s.w.target || 0,
     dur: Date.now() - s.startedAt,
     turns: att.slice(0, 400).map(a => ({n: a.nums, ms: a.ms, ok: a.ok ? 1 : 0}))
   });
@@ -1001,16 +1005,25 @@ function turnRanks(r){
   const slow = idx.slice().sort((a, b) => b.ms - a.ms).slice(0, 5).map(x => x.i);
   return {fast: new Set(fast), slow: new Set(slow)};
 }
+function chartToggles(ts){
+  const b = (act, on, txt) => `<button class="${on ? 'on' : ''}" data-act="${act}"${ts ? ` data-ts="${ts}"` : ''} style="padding:5px 10px;font-size:12.5px">${txt}</button>`;
+  return `<div class="seg" style="flex:none">${b('chart-avg', SET.chartAvg, tr('Gem.', 'Avg'))}${b('chart-target', SET.chartTarget, tr('Streef', 'Target'))}</div>`;
+}
 function sessionChartHtml(r){
-  const max = Math.max(...r.turns.map(t => Math.min(t.ms, 10000)), 1);
+  const avg = sessionStats(r).avg;
+  const tgt = (r.target || 0) * 1000;
+  const showAvg = SET.chartAvg && avg > 0;
+  const showTgt = SET.chartTarget && tgt > 0;
+  const max = Math.max(...r.turns.map(t => Math.min(t.ms, 10000)), showAvg ? avg : 0, showTgt ? tgt : 0, 1);
   const {fast, slow} = turnRanks(r);
-  return `<div class="schart">${r.turns.map((t, i) => {
+  const line = (v, color, lbl) => `<div class="hline" style="bottom:${16 + Math.round(Math.min(v, 10000) / max * 84)}px;border-color:${color}"><span style="color:${color}">${lbl} ${(v / 1000).toFixed(1)}s</span></div>`;
+  return `<div class="schart"><div class="schart-in">${r.turns.map((t, i) => {
     const ms = Math.min(t.ms, 10000);
     const px = Math.max(5, Math.round(ms / max * 84));
     const lbl = (t.n || []).map(dispNum).join(' ');
     const mk = slow.has(i) ? '<i class="mk-warn">!</i>' : (fast.has(i) ? '👑' : '');
     return `<div class="sb"><span class="mk">${mk}</span><b>${(t.ms / 1000).toFixed(1)}</b><i style="height:${px}px;background:${t.ok ? 'var(--p)' : 'var(--bad-ink)'}"></i><span class="numfont">${lbl}</span></div>`;
-  }).join('')}</div>
+  }).join('')}${showAvg ? line(avg, 'var(--ink2)', tr('gem.', 'avg')) : ''}${showTgt ? line(tgt, 'var(--a)', tr('streef', 'target')) : ''}</div></div>
   <div class="legend"><i style="background:var(--p)"></i><span>${tr('gekend', 'known')}</span><i style="background:var(--bad-ink)"></i><span>${tr('vergeten', 'forgotten')}</span><span>👑 ${tr('snelste', 'fastest')}</span><span><i class="mk-warn" style="width:12px;height:12px;font-size:8.5px">!</i> ${tr('langzaamste', 'slowest')}</span><span style="margin-left:auto">${tr('sec.', 'sec.')}</span></div>`;
 }
 function sessSuggestions(r){
@@ -1051,7 +1064,9 @@ function openSessionDetail(ts){
         <span class="chip">${st.turns} ${tr('beurten', 'turns')}</span>
         <span class="chip">${st.okPct}% ${tr('gekend', 'known')}</span>
         ${st.avg ? `<span class="chip">${tr('gem.', 'avg')} ${(st.avg / 1000).toFixed(1)}s</span>` : ''}
+        ${r.target ? `<span class="chip">${tr('streef', 'target')} ${r.target}s</span>` : ''}
       </div>
+      <div class="row"><span class="grow"></span>${chartToggles(r.ts)}</div>
       ${sessionChartHtml(r)}
       ${(() => {
         const fastT = r.turns.filter(t => t.ok).sort((a, b) => a.ms - b.ms).slice(0, 5);
@@ -1566,6 +1581,7 @@ function viewTrain(){
           : `<div class="hint">${SET.qLen === 4 ? tr('Persoon van het eerste paar, actie van het tweede.', 'Person from the first pair, action from the second.') : tr('Persoon · actie · object van de drie paren — één scène.', 'Person · action · object from the three pairs — one scene.')}</div>`}
         <div class="seg">${[[0, tr('Geen timer', 'No timer')],[2,'2 min'],[5,'5 min'],[10,'10 min']].map(([v,t]) => `<button class="${(SET.qTimer || 0) === v ? 'on' : ''}" data-act="qtimer" data-v="${v}">${t}</button>`).join('')}</div>
         <div class="seg">${[[0, tr('Eigen tempo', 'Own pace')],[4,'4s'],[3,'3s'],[2,'2s']].map(([v,t]) => `<button class="${(SET.qTempo || 0) === v ? 'on' : ''}" data-act="qtempo" data-v="${v}">${t}</button>`).join('')}</div>
+        <div class="seg">${[[0, tr('Geen streef', 'No target')],[4,'4s'],[3,'3s'],[2,'2s'],[1.5,'1,5s']].map(([v,t]) => `<button class="${(SET.qTarget || 0) === v ? 'on' : ''}" data-act="qtarget" data-v="${v}">${t}</button>`).join('')}</div>
         <button class="btn" data-act="start-quick">Start</button>
         ${due.size ? `<div class="hint">${due.size} ${due.size === 1 ? tr('nummer is toe aan herhaling.', 'item is due for review.') : tr('nummers zijn toe aan herhaling.', 'items are due for review.')}</div>` : ''}
       </div>
@@ -1698,6 +1714,7 @@ function wkSpec(w){
   else if(w.mode === 'cards') parts.push(tr('speelkaarten', 'playing cards'));
   else parts.push(tr('alle nummers', 'all numbers'));
   if(w.tempo) parts.push(w.tempo + 's tempo');
+  if(w.target) parts.push(tr('streef ', 'target ') + String(w.target).replace('.', ',') + 's');
   if(w.delayed) parts.push(tr('5 inprenten → terughalen', 'memorize 5 → recall'));
   if(w.smart) parts.push(tr('slim', 'smart'));
   return parts.join(' · ');
@@ -1860,7 +1877,7 @@ function viewStats(){
         const lst = sessionStats(last);
         return `
         <div class="card stack" style="gap:10px">
-          <div class="label">${tr('Laatste sessie', 'Last session')}</div>
+          <div class="row"><div class="label grow">${tr('Laatste sessie', 'Last session')}</div>${chartToggles('')}</div>
           <div class="hint">${fmtDate(last.ts)} · ${esc(sessName(last))} · ${lst.turns} ${tr('beurten', 'turns')} · ${lst.okPct}%${lst.avg ? ` · ${tr('gem.', 'avg')} ${(lst.avg / 1000).toFixed(1)}s` : ''}</div>
           ${sessionChartHtml(last)}
         </div>
@@ -1890,10 +1907,10 @@ function viewStats(){
         </div>` : ''}
       <div class="card stack" style="gap:12px">
         <div class="row">
-          <div class="label grow">${tr('Gemiddelde reactietijd', 'Average reaction time')}</div>
+          <div class="label grow">${tr('Gemiddelde reactietijd (sec)', 'Average reaction time (sec)')}</div>
           <div class="seg" style="flex:none">${[['day', tr('Dag', 'Day')], ['week', 'Week'], ['sess', 'Training']].map(([v, t]) => `<button class="${trendMode === v ? 'on' : ''}" data-act="trend" data-v="${v}" style="padding:5px 10px;font-size:12.5px">${t}</button>`).join('')}</div>
         </div>
-        ${trend.some(b => b.v) ? `<div class="bars">${trend.map(b => `<div class="b">${b.v ? `<b>${(b.v/1000).toFixed(1)}</b>` : ''}<i style="height:${Math.round(b.v/maxBar*100)}%"></i><span>${b.label}</span></div>`).join('')}</div>` : `<div class="hint">${tr('Nog geen data in deze weergave.', 'No data in this view yet.')}</div>`}
+        ${trend.some(b => b.v) ? `<div class="bars">${trend.map(b => `<div class="b">${b.v ? `<b>${(b.v/1000).toFixed(1)}</b>` : ''}<i style="height:${b.v ? Math.max(4, Math.round(b.v/maxBar*56)) : 2}px"></i><span>${b.label}</span></div>`).join('')}</div>` : `<div class="hint">${tr('Nog geen data in deze weergave.', 'No data in this view yet.')}</div>`}
       </div>
       <div class="card stack" style="gap:10px">
         <div class="label">Data</div>
@@ -1989,6 +2006,9 @@ function renderWkEdit(){
           : `<div class="hint">${tr('Bij 4 en 6 cijfers: getal → scène (persoon · actie · object).', 'With 4 and 6 digits: number → scene (person · action · object).')}</div>`}</div>
       <div><div class="label" style="margin-bottom:6px">${tr('Tempo (auto-door)', 'Tempo (auto-advance)')}</div>
         <div class="seg">${[0,5,4,3,2].map(v => `<button class="${(w.tempo || 0) === v ? 'on' : ''}" data-act="we-tempo" data-v="${v}">${v ? v + 's' : tr('Uit', 'Off')}</button>`).join('')}</div></div>
+      <div><div class="label" style="margin-bottom:6px">${tr('Streeftijd per getal', 'Target time per item')}</div>
+        <div class="seg">${[0,4,3,2,1.5].map(v => `<button class="${(w.target || 0) === v ? 'on' : ''}" data-act="we-target" data-v="${v}">${v ? String(v).replace('.', ',') + 's' : tr('Uit', 'Off')}</button>`).join('')}</div>
+        <div class="hint" style="margin-top:4px">${tr('Waar je de lat legt — als stippellijn te tonen in de sessiegrafiek.', 'Where you set the bar — shown as a dashed line in the session chart.')}</div></div>
       <div><div class="label" style="margin-bottom:6px">${tr('Nummers', 'Items')}</div>
         <div class="seg" style="margin-bottom:10px;flex-wrap:wrap">${modeBtn('all', tr('Alles', 'All'))}${modeBtn('range', tr('Bereik', 'Range'))}${modeBtn('first', tr('Eerste', 'First'))}${modeBtn('last', tr('Laatste', 'Last'))}${modeBtn('manual', tr('Kies', 'Pick'))}${modeBtn('cards', tr('Kaarten', 'Cards'))}</div>
         ${modeUi}</div>
@@ -2189,6 +2209,13 @@ document.addEventListener('click', ev => {
   if(act === 'qlen'){ SET.qLen = +t.dataset.v; if(SET.qLen > 2) SET.qDir = 'pao'; saveSet(); render(); return }
   if(act === 'qtimer'){ SET.qTimer = +t.dataset.v; saveSet(); render(); return }
   if(act === 'qtempo'){ SET.qTempo = +t.dataset.v; saveSet(); render(); return }
+  if(act === 'qtarget'){ SET.qTarget = parseFloat(t.dataset.v) || 0; saveSet(); render(); return }
+  if(act === 'chart-avg' || act === 'chart-target'){
+    if(act === 'chart-avg') SET.chartAvg = !SET.chartAvg; else SET.chartTarget = !SET.chartTarget;
+    saveSet();
+    if(t.dataset.ts) openSessionDetail(+t.dataset.ts); else render();
+    return;
+  }
   if(act === 'start-seq'){
     const sel = $('#seqlevel'); if(sel){ SET.seqLevel = +sel.value; saveSet() }
     startSeq(SET.seqLevel); return;
@@ -2224,7 +2251,7 @@ document.addEventListener('click', ev => {
 
   if(act === 'start-quick'){
     const dirSel = $('#qdir'); if(dirSel){ SET.qDir = dirSel.value; saveSet() }
-    startSession({id:'quick', name:'Snelle training', mode:'all', len:SET.qLen, dir:SET.qLen > 2 ? 'pao' : SET.qDir, smart:false, limit:SET.qTimer || 0, tempo:SET.qTempo || 0});
+    startSession({id:'quick', name:'Snelle training', mode:'all', len:SET.qLen, dir:SET.qLen > 2 ? 'pao' : SET.qDir, smart:false, limit:SET.qTimer || 0, tempo:SET.qTempo || 0, target:SET.qTarget || 0});
     return;
   }
   if(act === 'start-rec'){
@@ -2254,6 +2281,7 @@ document.addEventListener('click', ev => {
   if(act === 'we-len'){ readWkForm(); WEDIT.len = +t.dataset.v; if(WEDIT.len > 2) WEDIT.dir = 'pao'; renderWkEdit(); return }
   if(act === 'we-digit'){ readWkForm(); WEDIT.digit = +t.dataset.v; renderWkEdit(); return }
   if(act === 'we-tempo'){ readWkForm(); WEDIT.tempo = +t.dataset.v; renderWkEdit(); return }
+  if(act === 'we-target'){ readWkForm(); WEDIT.target = parseFloat(t.dataset.v) || 0; renderWkEdit(); return }
   if(act === 'we-cell'){
     readWkForm();
     const n = +t.dataset.n; WEDIT.sel = WEDIT.sel || [];
