@@ -218,6 +218,11 @@
   .legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
   .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
 
+  .schart{display:flex;gap:3px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .schart .sb{flex:none;width:26px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
+  .schart .sb b{font-size:8.5px;font-weight:700;color:var(--ink3)}
+  .schart .sb i{width:100%;border-radius:5px 5px 2px 2px}
+  .schart .sb span{font-size:9px;color:var(--ink3);max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bars{display:flex;align-items:flex-end;gap:6px;height:90px}
   .bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
   .bars .b i{width:100%;border-radius:6px 6px 3px 3px;background:var(--p);opacity:.75;min-height:3px}
@@ -269,7 +274,7 @@ if(!LIST || !Array.isArray(LIST) || LIST.length !== 100){
 let LOG = LS.get('paoLog', []);
 let WORKOUTS = LS.get('paoWorkouts', []);
 let SRS = LS.get('paoSrs', {});
-let SET = Object.assign({theme:'auto', audio:false, lang:'nl', qLen:2, qDir:'pao', qTimer:0, qTempo:0, seqLevel:6, syncOn:false, syncCode:'', lastSync:null, syncDirty:false}, LS.get('paoSettings', {}));
+let SET = Object.assign({theme:'auto', audio:false, lang:'nl', qLen:2, qDir:'pao', qTimer:0, qTempo:0, seqLevel:6, syncOn:false, syncCode:'', lastSync:null, syncDirty:false, reminders:[]}, LS.get('paoSettings', {}));
 let CARDS = LS.get('paoCards', null);
 if(!CARDS || !Array.isArray(CARDS) || CARDS.length !== 52){
   CARDS = Array.from({length:52}, (_, c) => ({c, p:'', a:'', o:'', excluded:false, editP:0, editA:0, editO:0}));
@@ -364,7 +369,7 @@ function markDirty(){
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => syncPush(), 2500);
 }
-function syncPayload(){ return {v:1, list:LIST, cards:CARDS, log:LOG, workouts:WORKOUTS, srs:SRS, seq:seqHist()} }
+function syncPayload(){ return {v:1, list:LIST, cards:CARDS, log:LOG, workouts:WORKOUTS, srs:SRS, seq:seqHist(), sessions:sessHist()} }
 async function syncReq(method, body){
   const r = await fetch(SYNC_URL, {
     method,
@@ -460,6 +465,15 @@ function mergeFromRemote(p){
         changed = true;
       }
     }
+    if(Array.isArray(p.sessions)){
+      const h = sessHist();
+      const have = new Set(h.map(x => x.ts));
+      const add = p.sessions.filter(x => !have.has(x.ts));
+      if(add.length){
+        LS.set('paoSessions', h.concat(add).sort((a, b) => a.ts - b.ts).slice(-60));
+        changed = true;
+      }
+    }
   } finally { SYNCAPPLYING = false }
   return changed;
 }
@@ -501,6 +515,7 @@ function applySyncPayload(p){
     if(Array.isArray(p.workouts)){ WORKOUTS = p.workouts; LS.set('paoWorkouts', WORKOUTS) }
     if(p.srs && typeof p.srs === 'object'){ SRS = p.srs; LS.set('paoSrs', SRS) }
     if(Array.isArray(p.seq)) LS.set('paoSeq', p.seq);
+    if(Array.isArray(p.sessions)) LS.set('paoSessions', p.sessions);
   } finally { SYNCAPPLYING = false }
 }
 function genSyncCode(){
@@ -946,8 +961,65 @@ function endSession(){
   $('#session').hidden = true;
   const att = S ? S.attempts : [];
   const s = S; S = null;
+  if(s && att.length) logSession(s, att);
   if(att.length >= 3) showSummary(s, att);
   render();
+}
+/* ---------- trainingslog ---------- */
+function sessHist(){ return LS.get('paoSessions', []) }
+function logSession(s, att){
+  const h = sessHist();
+  h.push({
+    ts: s.startedAt, id: s.w.id || '', name: s.w.name || '', len: s.w.len, dir: s.w.dir,
+    dur: Date.now() - s.startedAt,
+    turns: att.slice(0, 400).map(a => ({n: a.nums, ms: a.ms, ok: a.ok ? 1 : 0}))
+  });
+  LS.set('paoSessions', h.slice(-60));
+  markDirty();
+}
+function sessName(r){
+  const b = BUILTIN.find(x => x.id === r.id);
+  return b ? builtinName(b) : (r.name || 'Training');
+}
+function sessionStats(r){
+  const okT = r.turns.filter(t => t.ok);
+  return {
+    turns: r.turns.length,
+    okPct: r.turns.length ? Math.round(okT.length / r.turns.length * 100) : 0,
+    avg: okT.length ? okT.reduce((a, b) => a + b.ms, 0) / okT.length : 0
+  };
+}
+function fmtDate(ts){
+  return new Date(ts).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+}
+function sessionChartHtml(r){
+  const max = Math.max(...r.turns.map(t => Math.min(t.ms, 10000)), 1);
+  return `<div class="schart">${r.turns.map(t => {
+    const ms = Math.min(t.ms, 10000);
+    const px = Math.max(5, Math.round(ms / max * 88));
+    const lbl = (t.n || []).map(dispNum).join(' ');
+    return `<div class="sb"><b>${(t.ms / 1000).toFixed(1)}</b><i style="height:${px}px;background:${t.ok ? 'var(--p)' : 'var(--bad-ink)'}"></i><span class="numfont">${lbl}</span></div>`;
+  }).join('')}</div>
+  <div class="legend"><i style="background:var(--p)"></i><span>${tr('gekend', 'known')}</span><i style="background:var(--bad-ink)"></i><span>${tr('vergeten', 'forgotten')}</span><span style="margin-left:auto">${tr('tijd in seconden', 'time in seconds')}</span></div>`;
+}
+function openSessionDetail(ts){
+  const r = sessHist().find(x => x.ts === ts);
+  if(!r) return;
+  const st = sessionStats(r);
+  const forgot = [...new Set(r.turns.filter(t => !t.ok).flatMap(t => t.n))];
+  openModal(`
+    <h2>${esc(sessName(r))}</h2>
+    <div class="stack">
+      <div class="hint">${fmtDate(r.ts)} · ${dirLabel(r.dir)} · ${fmtClock(r.dur)}</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <span class="chip">${st.turns} ${tr('beurten', 'turns')}</span>
+        <span class="chip">${st.okPct}% ${tr('gekend', 'known')}</span>
+        ${st.avg ? `<span class="chip">${tr('gem.', 'avg')} ${(st.avg / 1000).toFixed(1)}s</span>` : ''}
+      </div>
+      ${sessionChartHtml(r)}
+      ${forgot.length ? `<div><div class="label" style="margin-bottom:6px">${tr('Vergeten', 'Forgotten')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${forgot.map(n => `<span class="chip"><span class="numfont">${dispNum(n)}</span></span>`).join('')}</div></div>` : ''}
+      <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
+    </div>`);
 }
 function showSummary(s, att){
   // aggregate per displayed number (first number of item for multi-pair)
@@ -1423,6 +1495,15 @@ function viewTrain(){
       <button class="gearbtn" data-act="settings" aria-label="${tr('Instellingen', 'Settings')}">${ICONS.gear}</button>
     </div>
     <div class="stack">
+      ${(() => {
+        const rm = reminderDue();
+        return rm ? `
+        <div class="card stack" style="gap:10px;border-color:var(--accent)">
+          <div class="label" style="color:var(--accent)">${tr('Dagelijkse herinnering', 'Daily reminder')}</div>
+          <div class="hint">${tr('Je training van', 'Your training of')} ${esc(rm.time)} ${tr('staat nog klaar:', 'is still waiting:')} <b>${esc(reminderWorkoutName(rm.w))}</b></div>
+          <button class="btn" data-act="rem-start" data-id="${rm.id}">${tr('Start nu', 'Start now')}</button>
+        </div>` : '';
+      })()}
       <div class="card stack" style="gap:12px">
         <div class="label">${tr('Snelle training', 'Quick training')}</div>
         <div class="seg">${[2,4,6].map(l => `<button class="${SET.qLen === l ? 'on' : ''}" data-act="qlen" data-v="${l}">${l} ${tr('cijfers', 'digits')}</button>`).join('')}</div>
@@ -1464,6 +1545,21 @@ function openSettings(){
         <label class="tgl"><input type="checkbox" data-act="audio" ${SET.audio ? 'checked' : ''}><span></span></label>
       </div>
       <div class="divider"></div>
+      <div class="label">${tr('Dagelijkse herinneringen', 'Daily reminders')}</div>
+      ${(SET.reminders || []).map(rm => `
+        <div class="row">
+          <span class="numfont" style="font-weight:700;flex:none">${esc(rm.time)}</span>
+          <span class="hint grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(reminderWorkoutName(rm.w))}</span>
+          <button class="btn small quiet" data-act="rem-ics" data-id="${rm.id}" style="flex:none">${tr('Agenda', 'Calendar')}</button>
+          <button class="btn small quiet" data-act="rem-del" data-id="${rm.id}" style="flex:none;color:var(--bad-ink)">✕</button>
+        </div>`).join('')}
+      <div class="row" style="gap:8px">
+        <input class="field" type="time" id="rem-time" value="08:00" style="flex:none;width:110px">
+        <select class="field" id="rem-w">${reminderWorkoutOptions()}</select>
+      </div>
+      <button class="btn quiet" data-act="rem-add">+ ${tr('Herinnering toevoegen', 'Add reminder')}</button>
+      <div class="hint">${tr('Tik op ‘Agenda’ voor een dagelijks agendapunt met melding op je telefoon — op iPhone de betrouwbaarste herinnering. De link erin start direct de gekoppelde training. Zolang de app openstaat meldt hij zich ook zelf, en na het tijdstip zie je een startkaart op het Trainen-tabblad.', 'Tap ‘Calendar’ for a daily calendar event with an alert on your phone — the most reliable reminder on iPhone. Its link starts the linked training directly. While the app is open it also notifies by itself, and after the set time a start card appears on the Train tab.')}</div>
+      <div class="divider"></div>
       <div class="label">Cloud-sync</div>
       ${SET.syncOn && SET.syncCode ? `
         <div class="hint">${tr('Je gegevens (lijst, kaarten, statistieken, workouts) synchroniseren automatisch. Foto’s niet.', 'Your data (list, cards, statistics, workouts) syncs automatically. Photos excluded.')}</div>
@@ -1478,6 +1574,66 @@ function openSettings(){
       <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
     </div>`);
 }
+/* ---------- herinneringen ---------- */
+function reminderWorkoutName(id){
+  if(id === 'seq') return tr('Reeks-proef', 'Sequence test');
+  const b = BUILTIN.find(x => x.id === id);
+  if(b) return builtinName(b);
+  const w = WORKOUTS.find(x => x.id === id);
+  return w ? w.name : id;
+}
+function reminderWorkoutOptions(){
+  const opts = BUILTIN.map(b => [b.id, builtinName(b)])
+    .concat(WORKOUTS.map(w => [w.id, w.name]))
+    .concat([['seq', tr('Reeks-proef', 'Sequence test')]]);
+  return opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('');
+}
+function startWorkoutById(id){
+  if(id === 'seq'){ startSeq(SET.seqLevel); return }
+  const w = BUILTIN.find(x => x.id === id) || WORKOUTS.find(x => x.id === id);
+  if(w) startSession(w);
+  else toast(tr('Workout niet gevonden', 'Workout not found'));
+}
+function reminderDue(){
+  const rems = SET.reminders || [];
+  if(!rems.length) return null;
+  const now = new Date();
+  const today = now.toDateString();
+  if(sessHist().some(r => new Date(r.ts).toDateString() === today)) return null;
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return rems.find(r => {
+    const [h, m] = r.time.split(':').map(Number);
+    return h * 60 + m <= mins;
+  }) || null;
+}
+function reminderIcs(rm){
+  const now = new Date();
+  const dt = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}T${rm.time.replace(':', '')}00`;
+  const name = reminderWorkoutName(rm.w);
+  const url = CLOUD_URL + '?workout=' + encodeURIComponent(rm.w);
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PAO Trainer//NL', 'BEGIN:VEVENT',
+    `UID:pao-${rm.id}@pao-trainer`, `DTSTART:${dt}`, 'DURATION:PT15M', 'RRULE:FREQ=DAILY',
+    `SUMMARY:PAO Trainer — ${name}`, `DESCRIPTION:${tr('Start je training', 'Start your training')}: ${url}`, `URL:${url}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:PAO Trainer', 'TRIGGER:PT0S', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const blob = new Blob([ics], {type:'text/calendar'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pao-training.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+setInterval(() => {
+  if(!(SET.reminders || []).length || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = new Date();
+  const cur = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+  for(const rm of SET.reminders){
+    if(rm.time === cur && rm.fired !== now.toDateString()){
+      rm.fired = now.toDateString(); saveSet();
+      try{ new Notification('PAO Trainer', {body: tr('Tijd voor je training: ', 'Time for your training: ') + reminderWorkoutName(rm.w)}) }catch(e){}
+    }
+  }
+}, 30000);
 function wkSpec(w){
   const parts = [`${w.len} ${tr('cijfers', 'digits')}`, dirLabel(w.dir)];
   if(w.mode === 'range') parts.push(`${pad2(w.from)}–${pad2(w.to)}`);
@@ -1628,6 +1784,29 @@ function viewStats(){
         <div class="legend"><span>${tr('zwak', 'weak')}</span><i style="background:var(--h0)"></i><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i><span>${tr('sterk', 'strong')}</span><span style="margin-left:auto">${tr('grijs = nog geen data', 'grey = no data yet')}</span></div>
       </div>
       ${detail}
+      ${(() => {
+        const sess = sessHist();
+        if(!sess.length) return '';
+        const last = sess[sess.length - 1];
+        const lst = sessionStats(last);
+        return `
+        <div class="card stack" style="gap:10px">
+          <div class="label">${tr('Laatste sessie', 'Last session')}</div>
+          <div class="hint">${fmtDate(last.ts)} · ${esc(sessName(last))} · ${lst.turns} ${tr('beurten', 'turns')} · ${lst.okPct}%${lst.avg ? ` · ${tr('gem.', 'avg')} ${(lst.avg / 1000).toFixed(1)}s` : ''}</div>
+          ${sessionChartHtml(last)}
+        </div>
+        <div class="card stack" style="gap:4px">
+          <div class="label" style="margin-bottom:6px">${tr('Trainingslog', 'Training log')}</div>
+          ${sess.slice(-10).reverse().map(r => {
+            const st = sessionStats(r);
+            return `<button class="row" data-act="sess-log" data-ts="${r.ts}" style="text-align:left;padding:7px 0;border-bottom:1px solid var(--line)">
+              <span class="grow"><div style="font-weight:600;font-size:14px">${esc(sessName(r))}</div><div class="hint" style="font-size:12px">${fmtDate(r.ts)}</div></span>
+              <span class="hint" style="flex:none;font-size:12.5px">${st.turns}× · ${st.okPct}% · ${(st.avg / 1000).toFixed(1)}s</span>
+            </button>`;
+          }).join('')}
+          ${sess.length > 10 ? `<div class="hint" style="margin-top:4px">${tr('Laatste 10 van', 'Last 10 of')} ${sess.length}</div>` : ''}
+        </div>`;
+      })()}
       ${flags.length ? `
         <div class="card stack" style="gap:10px">
           <div class="label">${tr('Beeldkliniek', 'Image clinic')}</div>
@@ -1825,6 +2004,30 @@ document.addEventListener('click', ev => {
 
   if(act === 'tab'){ TAB = t.dataset.tab; STATSEL = null; render(); return }
   if(act === 'settings'){ openSettings(); return }
+  if(act === 'sess-log'){ openSessionDetail(+t.dataset.ts); return }
+  if(act === 'rem-add'){
+    const time = ($('#rem-time') || {}).value, w = ($('#rem-w') || {}).value;
+    if(!time || !w) return;
+    SET.reminders = (SET.reminders || []).concat([{id:'r' + Date.now(), time, w}]);
+    SET.reminders.sort((a, b) => a.time.localeCompare(b.time));
+    saveSet();
+    try{ if('Notification' in window && Notification.permission === 'default') Notification.requestPermission() }catch(e){}
+    openSettings(); toast(tr('Herinnering toegevoegd', 'Reminder added')); return;
+  }
+  if(act === 'rem-del'){
+    SET.reminders = (SET.reminders || []).filter(r => r.id !== t.dataset.id);
+    saveSet(); openSettings(); return;
+  }
+  if(act === 'rem-ics'){
+    const rm = (SET.reminders || []).find(r => r.id === t.dataset.id);
+    if(rm) reminderIcs(rm);
+    return;
+  }
+  if(act === 'rem-start'){
+    const rm = (SET.reminders || []).find(r => r.id === t.dataset.id);
+    if(rm) startWorkoutById(rm.w);
+    return;
+  }
   if(act === 'theme'){ SET.theme = t.dataset.v; saveSet(); applyTheme(); render(); if($('#settings-sheet')) openSettings(); return }
   if(act === 'lang'){ SET.lang = t.dataset.v; saveSet(); render(); if($('#settings-sheet')) openSettings(); return }
   if(act === 'libsrc'){ LIBSRC = t.dataset.v; render(); return }
@@ -2093,6 +2296,13 @@ applyTheme();
 render();
 imgLoadAll().then(() => { if(IMGURL.size && !S) render() });
 if(SET.syncOn && SET.syncCode) setTimeout(() => syncPull(false), 600);
+try{
+  const wq = new URLSearchParams(location.search).get('workout');
+  if(wq){
+    history.replaceState(null, '', location.pathname);
+    setTimeout(() => startWorkoutById(wq), 400);
+  }
+}catch(e){}
 document.addEventListener('visibilitychange', () => {
   if(!SET.syncOn || !SET.syncCode) return;
   if(document.visibilityState === 'visible'){
