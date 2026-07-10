@@ -227,6 +227,7 @@
   .bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
   .bars .b i{width:100%;border-radius:6px 6px 3px 3px;background:var(--p);opacity:.75;min-height:3px}
   .bars .b span{font-size:10px;color:var(--ink3);font-weight:600}
+  .bars .b b{font-size:8.5px;color:var(--ink3);font-weight:700}
 
   /* ---------- modal ---------- */
   #modal{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}
@@ -1743,14 +1744,29 @@ function viewStats(){
   const okAtt = LOG.filter(x => x.ok);
   const total = LOG.length;
   const okPct = total ? Math.round(okAtt.length / total * 100) : 0;
-  const wk = 7*24*3600e3; const now = Date.now();
-  const bars = [];
-  for(let i = 7; i >= 0; i--){
-    const from = now - (i+1)*wk, to = now - i*wk;
-    const ms = LOG.filter(x => x.ok && x.ts >= from && x.ts < to).map(x => x.ms);
-    bars.push(ms.length ? ms.reduce((a,b) => a+b,0)/ms.length : 0);
+  const trendMode = SET.trendMode || 'day';
+  const trend = [];
+  if(trendMode === 'sess'){
+    for(const r of sessHist().slice(-12)){
+      const st = sessionStats(r);
+      trend.push({v: st.avg, label: new Date(r.ts).toLocaleDateString(SET.lang === 'en' ? 'en-GB' : 'nl-NL', {day:'numeric', month:'numeric'})});
+    }
+  } else if(trendMode === 'week'){
+    const wk = 7*24*3600e3, now = Date.now();
+    for(let i = 7; i >= 0; i--){
+      const from = now - (i+1)*wk, to = now - i*wk;
+      const ms = LOG.filter(x => x.ok && x.ts >= from && x.ts < to).map(x => x.ms);
+      trend.push({v: ms.length ? ms.reduce((a,b) => a+b,0)/ms.length : 0, label: i === 0 ? tr('nu', 'now') : -i + 'w'});
+    }
+  } else {
+    for(let i = 13; i >= 0; i--){
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+      const from = d.getTime(), to = from + 24*3600e3;
+      const ms = LOG.filter(x => x.ok && x.ts >= from && x.ts < to).map(x => x.ms);
+      trend.push({v: ms.length ? ms.reduce((a,b) => a+b,0)/ms.length : 0, label: i === 0 ? tr('nu', 'now') : String(d.getDate())});
+    }
   }
-  const maxBar = Math.max(...bars, 1);
+  const maxBar = Math.max(...trend.map(b => b.v), 1);
   const flags = clinicFlags(st);
   let detail = '';
   if(STATSEL !== null){
@@ -1820,8 +1836,11 @@ function viewStats(){
           ${flags.length > 6 ? `<div class="hint">+ ${tr('nog', 'another')} ${flags.length - 6} ${tr('andere', 'more')}</div>` : ''}
         </div>` : ''}
       <div class="card stack" style="gap:12px">
-        <div class="label">${tr('Gemiddelde reactietijd per week', 'Average reaction time per week')}</div>
-        ${total ? `<div class="bars">${bars.map((b, i) => `<div class="b"><i style="height:${Math.round(b/maxBar*100)}%"></i><span>${i === 7 ? tr('nu', 'now') : -(7-i) + 'w'}</span></div>`).join('')}</div>` : `<div class="hint">${tr('Nog geen data.', 'No data yet.')}</div>`}
+        <div class="row">
+          <div class="label grow">${tr('Gemiddelde reactietijd', 'Average reaction time')}</div>
+          <div class="seg" style="flex:none">${[['day', tr('Dag', 'Day')], ['week', 'Week'], ['sess', 'Training']].map(([v, t]) => `<button class="${trendMode === v ? 'on' : ''}" data-act="trend" data-v="${v}" style="padding:5px 10px;font-size:12.5px">${t}</button>`).join('')}</div>
+        </div>
+        ${trend.some(b => b.v) ? `<div class="bars">${trend.map(b => `<div class="b">${b.v ? `<b>${(b.v/1000).toFixed(1)}</b>` : ''}<i style="height:${Math.round(b.v/maxBar*100)}%"></i><span>${b.label}</span></div>`).join('')}</div>` : `<div class="hint">${tr('Nog geen data in deze weergave.', 'No data in this view yet.')}</div>`}
       </div>
       <div class="card stack" style="gap:10px">
         <div class="label">Data</div>
@@ -2210,6 +2229,7 @@ document.addEventListener('click', ev => {
   }
 
   if(act === 'stat-cell'){ STATSEL = STATSEL === +t.dataset.n ? null : +t.dataset.n; render(); return }
+  if(act === 'trend'){ SET.trendMode = t.dataset.v; saveSet(); render(); return }
   if(act === 'export'){ openExport(); return }
   if(act === 'exp-copy'){
     const ta = $('#exp-txt'); ta.select(); ta.setSelectionRange(0, 999999);
