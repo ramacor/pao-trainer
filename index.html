@@ -221,6 +221,8 @@
   .schart{display:flex;gap:3px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
   .schart .sb{flex:none;width:26px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
   .schart .sb b{font-size:8.5px;font-weight:700;color:var(--ink3)}
+  .schart .sb .mk{height:15px;display:flex;align-items:center;justify-content:center;font-size:11px}
+  .mk-warn{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--bad-ink);color:#fff;font-size:9.5px;font-weight:800;font-style:normal;line-height:1}
   .schart .sb i{width:100%;border-radius:5px 5px 2px 2px}
   .schart .sb span{font-size:9px;color:var(--ink3);max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bars{display:flex;align-items:flex-end;gap:6px;height:90px}
@@ -993,15 +995,48 @@ function sessionStats(r){
 function fmtDate(ts){
   return new Date(ts).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
 }
+function turnRanks(r){
+  const idx = r.turns.map((t, i) => ({i, ms: t.ms, ok: t.ok}));
+  const fast = idx.filter(x => x.ok).sort((a, b) => a.ms - b.ms).slice(0, 5).map(x => x.i);
+  const slow = idx.slice().sort((a, b) => b.ms - a.ms).slice(0, 5).map(x => x.i);
+  return {fast: new Set(fast), slow: new Set(slow)};
+}
 function sessionChartHtml(r){
   const max = Math.max(...r.turns.map(t => Math.min(t.ms, 10000)), 1);
-  return `<div class="schart">${r.turns.map(t => {
+  const {fast, slow} = turnRanks(r);
+  return `<div class="schart">${r.turns.map((t, i) => {
     const ms = Math.min(t.ms, 10000);
-    const px = Math.max(5, Math.round(ms / max * 88));
+    const px = Math.max(5, Math.round(ms / max * 84));
     const lbl = (t.n || []).map(dispNum).join(' ');
-    return `<div class="sb"><b>${(t.ms / 1000).toFixed(1)}</b><i style="height:${px}px;background:${t.ok ? 'var(--p)' : 'var(--bad-ink)'}"></i><span class="numfont">${lbl}</span></div>`;
+    const mk = slow.has(i) ? '<i class="mk-warn">!</i>' : (fast.has(i) ? '👑' : '');
+    return `<div class="sb"><span class="mk">${mk}</span><b>${(t.ms / 1000).toFixed(1)}</b><i style="height:${px}px;background:${t.ok ? 'var(--p)' : 'var(--bad-ink)'}"></i><span class="numfont">${lbl}</span></div>`;
   }).join('')}</div>
-  <div class="legend"><i style="background:var(--p)"></i><span>${tr('gekend', 'known')}</span><i style="background:var(--bad-ink)"></i><span>${tr('vergeten', 'forgotten')}</span><span style="margin-left:auto">${tr('tijd in seconden', 'time in seconds')}</span></div>`;
+  <div class="legend"><i style="background:var(--p)"></i><span>${tr('gekend', 'known')}</span><i style="background:var(--bad-ink)"></i><span>${tr('vergeten', 'forgotten')}</span><span>👑 ${tr('snelste', 'fastest')}</span><span><i class="mk-warn" style="width:12px;height:12px;font-size:8.5px">!</i> ${tr('langzaamste', 'slowest')}</span><span style="margin-left:auto">${tr('sec.', 'sec.')}</span></div>`;
+}
+function sessSuggestions(r){
+  const {slow} = turnRanks(r);
+  const slowNums = [...new Set(r.turns.filter((t, i) => slow.has(i)).flatMap(t => t.n))];
+  const forgotNums = [...new Set(r.turns.filter(t => !t.ok).flatMap(t => t.n))];
+  const focus = [...new Set([...forgotNums, ...slowNums])].slice(0, 15);
+  const all = [...new Set(r.turns.flatMap(t => t.n))];
+  const base = focus.length >= 3 ? focus : all;
+  const st = sessionStats(r);
+  const tempo = Math.min(5, Math.max(2, Math.round((st.avg || 3000) / 1000 * 1.2)));
+  return [
+    {label: `${tr('Gerichte herhaling', 'Focused repeat')} · ${base.length} ${tr('nummers', 'items')}`,
+     hint: tr('De vergeten en langzaamste nummers nog een keer, op je gemak.', 'The forgotten and slowest items once more, at your own pace.'),
+     w: {id:'sugg-repeat', name: tr('Gerichte herhaling', 'Focused repeat'), mode:'manual', sel: base, len:2, dir:'pao', smart:false, limit:5}},
+    {label: `${tr('Tempodrill', 'Tempo drill')} · ${tempo}s ${tr('per getal', 'per item')}`,
+     hint: tr('Alle nummers van deze sessie, nét boven je gemiddelde tempo.', 'All items from this session, just above your average pace.'),
+     w: {id:'sugg-tempo', name:'Tempodrill', mode:'manual', sel: all, len:2, dir:'pao', smart:false, tempo, limit:5}},
+    forgotNums.length >= 3
+      ? {label: tr('Uitgesteld terughalen', 'Delayed recall'),
+         hint: tr('Prent de probleemgevallen opnieuw in en haal ze pas daarna terug.', 'Re-memorize the trouble cases and recall them only afterwards.'),
+         w: {id:'sugg-delayed', name: tr('Uitgesteld terughalen', 'Delayed recall'), mode:'manual', sel: base, len:2, dir:'pao', smart:false, delayed:true, limit:5}}
+      : {label: tr('Alle richtingen', 'All directions'),
+         hint: tr('Zelfde nummers, kriskras bevraagd — ook omgekeerd naar het getal toe.', 'Same items, quizzed criss-cross — including back to the number.'),
+         w: {id:'sugg-mix', name:'Mix', mode:'manual', sel: base, len:2, dir:'mix', smart:false, limit:5}}
+  ];
 }
 function openSessionDetail(ts){
   const r = sessHist().find(x => x.ts === ts);
@@ -1018,7 +1053,25 @@ function openSessionDetail(ts){
         ${st.avg ? `<span class="chip">${tr('gem.', 'avg')} ${(st.avg / 1000).toFixed(1)}s</span>` : ''}
       </div>
       ${sessionChartHtml(r)}
+      ${(() => {
+        const fastT = r.turns.filter(t => t.ok).sort((a, b) => a.ms - b.ms).slice(0, 5);
+        const slowT = r.turns.slice().sort((a, b) => b.ms - a.ms).slice(0, 5);
+        const chip = (t, mk) => `<span class="chip">${mk}<span class="numfont">${(t.n || []).map(dispNum).join(' ')}</span><span style="font-weight:500;color:var(--ink2)">${(t.ms / 1000).toFixed(1)}s</span></span>`;
+        return `
+        ${fastT.length ? `<div><div class="label" style="margin-bottom:6px">👑 ${tr('Snelste 5', 'Fastest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${fastT.map(t => chip(t, '👑 ')).join('')}</div></div>` : ''}
+        ${slowT.length ? `<div><div class="label" style="margin-bottom:6px">${tr('Langzaamste 5', 'Slowest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${slowT.map(t => chip(t, '<i class="mk-warn" style="margin-right:2px">!</i>')).join('')}</div></div>` : ''}`;
+      })()}
       ${forgot.length ? `<div><div class="label" style="margin-bottom:6px">${tr('Vergeten', 'Forgotten')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${forgot.map(n => `<span class="chip"><span class="numfont">${dispNum(n)}</span></span>`).join('')}</div></div>` : ''}
+      <div>
+        <div class="label" style="margin-bottom:8px">${tr('Vervolgtraining op basis van deze sessie', 'Follow-up training based on this session')}</div>
+        <div class="stack" style="gap:8px">
+          ${sessSuggestions(r).map((s, i) => `
+            <button class="card row" data-act="sess-sugg" data-ts="${r.ts}" data-i="${i}" style="padding:12px 14px;text-align:left">
+              <span class="grow"><div style="font-weight:700;font-size:14.5px">${s.label}</div><div class="hint" style="font-size:12.5px">${s.hint}</div></span>
+              <span class="hint" style="font-size:18px;flex:none">›</span>
+            </button>`).join('')}
+        </div>
+      </div>
       <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
     </div>`);
 }
@@ -2024,6 +2077,12 @@ document.addEventListener('click', ev => {
   if(act === 'tab'){ TAB = t.dataset.tab; STATSEL = null; render(); return }
   if(act === 'settings'){ openSettings(); return }
   if(act === 'sess-log'){ openSessionDetail(+t.dataset.ts); return }
+  if(act === 'sess-sugg'){
+    const r = sessHist().find(x => x.ts === +t.dataset.ts);
+    const sg = r && sessSuggestions(r)[+t.dataset.i];
+    if(sg){ closeModal(); startSession(sg.w) }
+    return;
+  }
   if(act === 'rem-add'){
     const time = ($('#rem-time') || {}).value, w = ($('#rem-w') || {}).value;
     if(!time || !w) return;
