@@ -224,8 +224,11 @@
   .hline span{position:absolute;right:0;top:-14px;font-size:8.5px;font-weight:800;background:var(--surface);padding:0 3px;border-radius:4px}
   .schart .sb{flex:none;width:26px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
   .schart .sb b{font-size:8.5px;font-weight:700;color:var(--ink3)}
-  .schart .sb .mk{height:15px;display:flex;align-items:center;justify-content:center;font-size:11px}
-  .mk-warn{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--bad-ink);color:#fff;font-size:9.5px;font-weight:800;font-style:normal;line-height:1}
+  .schart .sb .mk{height:15px;display:flex;align-items:center;justify-content:center}
+  .icx{display:inline-flex;vertical-align:-2px;flex:none}
+  .icx svg{width:100%;height:100%}
+  .heat button{position:relative}
+  .heat .ci{position:absolute;top:1px;right:1px;line-height:0;pointer-events:none}
   .schart .sb i{width:100%;border-radius:5px 5px 2px 2px}
   .schart .sb span{font-size:9px;color:var(--ink3);max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bars{display:flex;align-items:flex-end;gap:6px;height:90px}
@@ -1021,10 +1024,10 @@ function sessionChartHtml(r){
     const ms = Math.min(t.ms, 10000);
     const px = Math.max(5, Math.round(ms / max * 84));
     const lbl = (t.n || []).map(dispNum).join(' ');
-    const mk = slow.has(i) ? '<i class="mk-warn">!</i>' : (fast.has(i) ? '👑' : '');
+    const mk = slow.has(i) ? icx('alert', 13) : (fast.has(i) ? icx('crown', 14) : '');
     return `<div class="sb"><span class="mk">${mk}</span><b>${(t.ms / 1000).toFixed(1)}</b><i style="height:${px}px;background:${t.ok ? 'var(--p)' : 'var(--bad-ink)'}"></i><span class="numfont">${lbl}</span></div>`;
   }).join('')}${showAvg ? line(avg, 'var(--ink2)', tr('gem.', 'avg')) : ''}${showTgt ? line(tgt, 'var(--a)', tr('streef', 'target')) : ''}</div></div>
-  <div class="legend"><i style="background:var(--p)"></i><span>${tr('gekend', 'known')}</span><i style="background:var(--bad-ink)"></i><span>${tr('vergeten', 'forgotten')}</span><span>👑 ${tr('snelste', 'fastest')}</span><span><i class="mk-warn" style="width:12px;height:12px;font-size:8.5px">!</i> ${tr('langzaamste', 'slowest')}</span><span style="margin-left:auto">${tr('sec.', 'sec.')}</span></div>`;
+  <div class="legend"><i style="background:var(--p)"></i><span>${tr('gekend', 'known')}</span><i style="background:var(--bad-ink)"></i><span>${tr('vergeten', 'forgotten')}</span><span>${icx('crown', 12)} ${tr('snelste', 'fastest')}</span><span>${icx('alert', 12)} ${tr('langzaamste', 'slowest')}</span><span style="margin-left:auto">${tr('sec.', 'sec.')}</span></div>`;
 }
 function sessSuggestions(r){
   const {slow} = turnRanks(r);
@@ -1073,8 +1076,8 @@ function openSessionDetail(ts){
         const slowT = r.turns.slice().sort((a, b) => b.ms - a.ms).slice(0, 5);
         const chip = (t, mk) => `<span class="chip">${mk}<span class="numfont">${(t.n || []).map(dispNum).join(' ')}</span><span style="font-weight:500;color:var(--ink2)">${(t.ms / 1000).toFixed(1)}s</span></span>`;
         return `
-        ${fastT.length ? `<div><div class="label" style="margin-bottom:6px">👑 ${tr('Snelste 5', 'Fastest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${fastT.map(t => chip(t, '👑 ')).join('')}</div></div>` : ''}
-        ${slowT.length ? `<div><div class="label" style="margin-bottom:6px">${tr('Langzaamste 5', 'Slowest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${slowT.map(t => chip(t, '<i class="mk-warn" style="margin-right:2px">!</i>')).join('')}</div></div>` : ''}`;
+        ${fastT.length ? `<div><div class="label" style="margin-bottom:6px">${icx('crown', 13)} ${tr('Snelste 5', 'Fastest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${fastT.map(t => chip(t, icx('crown', 13))).join('')}</div></div>` : ''}
+        ${slowT.length ? `<div><div class="label" style="margin-bottom:6px">${icx('alert', 13)} ${tr('Langzaamste 5', 'Slowest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${slowT.map(t => chip(t, icx('alert', 13))).join('')}</div></div>` : ''}`;
       })()}
       ${forgot.length ? `<div><div class="label" style="margin-bottom:6px">${tr('Vergeten', 'Forgotten')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${forgot.map(n => `<span class="chip"><span class="numfont">${dispNum(n)}</span></span>`).join('')}</div></div>` : ''}
       <div>
@@ -1521,8 +1524,11 @@ const ICONS = {
   workouts:'<svg viewBox="0 0 24 24"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/></svg>',
   lib:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
   stats:'<svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></svg>',
-  gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+  gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  crown:'<svg viewBox="0 0 24 24" style="fill:none;stroke:none"><defs><linearGradient id="icg-c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD75E"/><stop offset="1" stop-color="#E8A614"/></linearGradient></defs><path d="M3.5 7.5 8 11.5 12 5l4 6.5 4.5-4-1.8 10.4c-.1.5-.5.9-1 .9H6.3c-.5 0-.9-.4-1-.9L3.5 7.5z" fill="url(#icg-c)" stroke="#B97E08" stroke-width=".9" stroke-linejoin="round"/><circle cx="12" cy="15" r="1.3" fill="#FFF3C9"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" style="fill:none;stroke:none"><defs><linearGradient id="icg-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8F76"/><stop offset="1" stop-color="#D9503A"/></linearGradient></defs><circle cx="12" cy="12" r="10" fill="url(#icg-a)" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/><rect x="10.8" y="5.6" width="2.4" height="8.6" rx="1.2" fill="#fff"/><circle cx="12" cy="17.5" r="1.5" fill="#fff"/></svg>'
 };
+const icx = (name, px) => `<span class="icx" style="width:${px}px;height:${px}px">${ICONS[name]}</span>`;
 let TAB = 'train';
 let LIBQ = '';
 let LIBSRC = 'num';
@@ -1805,11 +1811,25 @@ function viewLib(){
 }
 function viewStats(){
   const st = buildStats();
+  // snelste/langzaamste nummers over alle data (min. 3 gekende beurten)
+  const perf = [];
+  for(let n = 0; n < 100; n++){
+    const ms = [];
+    for(const el of ELS){
+      const a = st.map[n + ':' + el];
+      if(a) for(const x of a) if(x.ok) ms.push(x.ms);
+    }
+    if(ms.length >= 3) perf.push({n, avg: ms.reduce((a, b) => a + b, 0) / ms.length});
+  }
+  perf.sort((a, b) => a.avg - b.avg);
+  const slowN = new Set(perf.slice(-5).map(x => x.n));
+  const fastN = new Set(perf.slice(0, 5).map(x => x.n).filter(n => !slowN.has(n)));
   const cells = [];
   for(let n = 0; n < 100; n++){
     const s = numStrength(st, n);
     const b = bucket(s);
-    cells.push(`<button class="numfont ${b >= 0 ? 's' + b : ''} ${LIST[n].excluded ? 'x' : ''} ${STATSEL === n ? 'sel' : ''}" data-act="stat-cell" data-n="${n}">${pad2(n)}</button>`);
+    const ci = fastN.has(n) ? `<span class="ci">${icx('crown', 10)}</span>` : (slowN.has(n) ? `<span class="ci">${icx('alert', 10)}</span>` : '');
+    cells.push(`<button class="numfont ${b >= 0 ? 's' + b : ''} ${LIST[n].excluded ? 'x' : ''} ${STATSEL === n ? 'sel' : ''}" data-act="stat-cell" data-n="${n}">${pad2(n)}${ci}</button>`);
   }
   const okAtt = LOG.filter(x => x.ok);
   const total = LOG.length;
