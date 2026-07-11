@@ -871,7 +871,32 @@ function logItem(ok, ms){
     srsUpdate(n, el, ok);
   }
   S.attempts.push({nums:S.item.nums.slice(), dir:S.item.dir, ms:Math.round(ms), ok});
+  S.prev = {item: S.item};
   saveLog(); saveSrs();
+}
+/* swipe rechts: vorige beurt met antwoord terugzien */
+function sessPeek(){
+  if(!S || !S.prev || S.state === 'peek' || S.state === 'enc') return;
+  clearTempo();
+  S.peekFrom = {state: S.state, item: S.item};
+  S.item = S.prev.item;
+  S.state = 'peek';
+  renderSession();
+}
+function peekResume(){
+  const back = S.peekFrom || {state: 'flash'};
+  S.peekFrom = null;
+  if(back.state === 'q'){
+    S.item = back.item; S.state = 'q';
+    renderSession();
+    S.t0 = performance.now();
+    if(S.tempoMs) S.tempoTimer = setTimeout(tempoExpire, S.tempoMs);
+  } else if(back.state === 'ans'){
+    S.item = back.item; S.state = 'ans';
+    renderSession();
+  } else {
+    nextItem();
+  }
 }
 function answerHtml(it){
   const rows = [];
@@ -901,7 +926,7 @@ function answerSpeech(it){
 function renderSession(){
   const it = S.item;
   const sess = $('#session');
-  sess.classList.toggle('answering', S.state === 'ans' || S.state === 'flash');
+  sess.classList.toggle('answering', S.state === 'ans' || S.state === 'flash' || S.state === 'peek');
   sess.classList.toggle('encoding', S.state === 'enc');
   let prompt;
   if(it.dir.startsWith('r')){
@@ -915,7 +940,8 @@ function renderSession(){
     ? (it.nums.length === 1 ? `${paoLbl} → P·A·O` : it.nums.length === 2 ? `${paoLbl} → ${elName('p')} · ${elName('a')}` : `${paoLbl} → ${elName('p')} · ${elName('a')} · ${elName('o')}`)
     : dirLabel(it.dir);
   if(isCard(it.nums[0]) && it.dir === 'pao') dl = dl.replace(paoLbl, tr('Kaart', 'Card'));
-  if(S.state === 'enc') dl = `${tr('Prent in', 'Memorize')} · ${S.encIdx}/${S.batch.length}`;
+  if(S.state === 'peek') dl = tr('Vorige — veeg of tik ✓ om verder te gaan', 'Previous — swipe or tap ✓ to continue');
+  else if(S.state === 'enc') dl = `${tr('Prent in', 'Memorize')} · ${S.encIdx}/${S.batch.length}`;
   else if(S.w.delayed) dl = `${tr('Terughalen', 'Recall')} · ${S.quizIdx}/${S.batch.length}`;
   sess.innerHTML = `
     <div class="sess-top">
@@ -931,7 +957,7 @@ function renderSession(){
       <div class="dirlabel">${dl}</div>
       ${S.tempoMs ? `<div class="tempobar">${S.state === 'q' ? `<i style="animation-duration:${S.tempoMs}ms"></i>` : ''}</div>` : ''}
       ${prompt}
-      <div id="answer">${(S.state === 'ans' || S.state === 'flash') ? (IMGURL.has(it.nums[0]) ? `<img class="ansimg fade" src="${IMGURL.get(it.nums[0])}" alt="">` : '') + answerHtml(it) : ''}</div>
+      <div id="answer">${(S.state === 'ans' || S.state === 'flash' || S.state === 'peek') ? (IMGURL.has(it.nums[0]) ? `<img class="ansimg fade" src="${IMGURL.get(it.nums[0])}" alt="">` : '') + answerHtml(it) : ''}</div>
     </div>
     <div class="sess-btns">
       <button id="btn-bad" data-act="sess-bad" aria-label="Vergeten">
@@ -946,6 +972,7 @@ function renderSession(){
 function clearTempo(){ if(S && S.tempoTimer){ clearTimeout(S.tempoTimer); S.tempoTimer = null } }
 function sessGreen(){
   clearTempo();
+  if(S.state === 'peek'){ peekResume(); return }
   if(S.state === 'enc'){ nextItem(); return }
   if(S.state === 'q'){
     logItem(true, performance.now() - S.t0);
@@ -2440,6 +2467,22 @@ try{
     setTimeout(() => startWorkoutById(wq), 400);
   }
 }catch(e){}
+/* swipe-navigatie tijdens een training */
+let swX = null, swY = 0, swT = 0;
+document.addEventListener('touchstart', e => {
+  if(!S || $('#session').hidden || !$('#modal').hidden || e.target.closest('.sess-btns') || e.target.closest('.sess-top')){ swX = null; return }
+  swX = e.touches[0].clientX; swY = e.touches[0].clientY; swT = Date.now();
+}, {passive:true});
+document.addEventListener('touchend', e => {
+  if(swX === null || !S) return;
+  const dx = e.changedTouches[0].clientX - swX;
+  const dy = e.changedTouches[0].clientY - swY;
+  swX = null;
+  if(Date.now() - swT > 600 || Math.abs(dx) < 60 || Math.abs(dy) > 70) return;
+  if(dx < 0) sessGreen();  // naar links = volgende (groene knop)
+  else sessPeek();         // naar rechts = vorige met antwoord
+}, {passive:true});
+
 document.addEventListener('visibilitychange', () => {
   if(!SET.syncOn || !SET.syncCode) return;
   if(document.visibilityState === 'visible'){
