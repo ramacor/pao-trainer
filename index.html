@@ -898,7 +898,7 @@ function answerSpeech(it){
 function renderSession(){
   const it = S.item;
   const sess = $('#session');
-  sess.classList.toggle('answering', S.state === 'ans');
+  sess.classList.toggle('answering', S.state === 'ans' || S.state === 'flash');
   sess.classList.toggle('encoding', S.state === 'enc');
   let prompt;
   if(it.dir.startsWith('r')){
@@ -928,7 +928,7 @@ function renderSession(){
       <div class="dirlabel">${dl}</div>
       ${S.tempoMs ? `<div class="tempobar">${S.state === 'q' ? `<i style="animation-duration:${S.tempoMs}ms"></i>` : ''}</div>` : ''}
       ${prompt}
-      <div id="answer">${S.state === 'ans' ? (IMGURL.has(it.nums[0]) ? `<img class="ansimg fade" src="${IMGURL.get(it.nums[0])}" alt="">` : '') + answerHtml(it) : ''}</div>
+      <div id="answer">${(S.state === 'ans' || S.state === 'flash') ? (IMGURL.has(it.nums[0]) ? `<img class="ansimg fade" src="${IMGURL.get(it.nums[0])}" alt="">` : '') + answerHtml(it) : ''}</div>
     </div>
     <div class="sess-btns">
       <button id="btn-bad" data-act="sess-bad" aria-label="Vergeten">
@@ -944,8 +944,15 @@ function clearTempo(){ if(S && S.tempoTimer){ clearTimeout(S.tempoTimer); S.temp
 function sessGreen(){
   clearTempo();
   if(S.state === 'enc'){ nextItem(); return }
-  if(S.state === 'q'){ logItem(true, performance.now() - S.t0); nextItem() }
-  else nextItem();
+  if(S.state === 'q'){
+    logItem(true, performance.now() - S.t0);
+    // korte bevestigingsflits van het antwoord, daarna automatisch door
+    S.state = 'flash';
+    renderSession();
+    S.tempoTimer = setTimeout(() => { if(S && S.state === 'flash') nextItem() }, 600);
+    return;
+  }
+  nextItem();
 }
 function sessRed(){
   if(S.state !== 'q') return;
@@ -1004,8 +1011,8 @@ function fmtDate(ts){
 }
 function turnRanks(r){
   const idx = r.turns.map((t, i) => ({i, ms: t.ms, ok: t.ok}));
-  const fast = idx.filter(x => x.ok).sort((a, b) => a.ms - b.ms).slice(0, 5).map(x => x.i);
-  const slow = idx.slice().sort((a, b) => b.ms - a.ms).slice(0, 5).map(x => x.i);
+  const fast = idx.filter(x => x.ok).sort((a, b) => a.ms - b.ms).slice(0, 3).map(x => x.i);
+  const slow = idx.slice().sort((a, b) => b.ms - a.ms).slice(0, 3).map(x => x.i);
   return {fast: new Set(fast), slow: new Set(slow)};
 }
 function chartToggles(ts){
@@ -1072,12 +1079,12 @@ function openSessionDetail(ts){
       <div class="row"><span class="grow"></span>${chartToggles(r.ts)}</div>
       ${sessionChartHtml(r)}
       ${(() => {
-        const fastT = r.turns.filter(t => t.ok).sort((a, b) => a.ms - b.ms).slice(0, 5);
-        const slowT = r.turns.slice().sort((a, b) => b.ms - a.ms).slice(0, 5);
+        const fastT = r.turns.filter(t => t.ok).sort((a, b) => a.ms - b.ms).slice(0, 3);
+        const slowT = r.turns.slice().sort((a, b) => b.ms - a.ms).slice(0, 3);
         const chip = (t, mk) => `<span class="chip">${mk}<span class="numfont">${(t.n || []).map(dispNum).join(' ')}</span><span style="font-weight:500;color:var(--ink2)">${(t.ms / 1000).toFixed(1)}s</span></span>`;
         return `
-        ${fastT.length ? `<div><div class="label" style="margin-bottom:6px">${icx('crown', 13)} ${tr('Snelste 5', 'Fastest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${fastT.map(t => chip(t, icx('crown', 13))).join('')}</div></div>` : ''}
-        ${slowT.length ? `<div><div class="label" style="margin-bottom:6px">${icx('alert', 13)} ${tr('Langzaamste 5', 'Slowest 5')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${slowT.map(t => chip(t, icx('alert', 13))).join('')}</div></div>` : ''}`;
+        ${fastT.length ? `<div><div class="label" style="margin-bottom:6px">${icx('crown', 13)} ${tr('Snelste 3', 'Fastest 3')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${fastT.map(t => chip(t, icx('crown', 13))).join('')}</div></div>` : ''}
+        ${slowT.length ? `<div><div class="label" style="margin-bottom:6px">${icx('alert', 13)} ${tr('Langzaamste 3', 'Slowest 3')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${slowT.map(t => chip(t, icx('alert', 13))).join('')}</div></div>` : ''}`;
       })()}
       ${forgot.length ? `<div><div class="label" style="margin-bottom:6px">${tr('Vergeten', 'Forgotten')}</div><div class="row" style="flex-wrap:wrap;gap:6px">${forgot.map(n => `<span class="chip"><span class="numfont">${dispNum(n)}</span></span>`).join('')}</div></div>` : ''}
       <div>
