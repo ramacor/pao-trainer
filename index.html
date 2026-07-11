@@ -949,7 +949,7 @@ function sessGreen(){
     // korte bevestigingsflits van het antwoord, daarna automatisch door
     S.state = 'flash';
     renderSession();
-    S.tempoTimer = setTimeout(() => { if(S && S.state === 'flash') nextItem() }, 600);
+    S.tempoTimer = setTimeout(() => { if(S && S.state === 'flash') nextItem() }, 300);
     return;
   }
   nextItem();
