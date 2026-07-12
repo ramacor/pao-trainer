@@ -138,7 +138,10 @@
   .bignum.n4{font-size:min(21vw,110px)}
   .bignum.n6{font-size:min(13.5vw,72px)}
   .bigword{font-size:clamp(26px,7.5vw,40px);font-weight:800;text-align:center;text-wrap:balance;line-height:1.2}
-  #answer{width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px;min-height:118px}
+  .qwrap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;min-height:140px}
+  .bignum,.bigword{transition:opacity .15s}
+  #session.answering .qwrap .bignum,#session.answering .qwrap .bigword{opacity:.12}
+  #answer{position:absolute;inset:-24px 0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;pointer-events:none}
   #answer .el{justify-content:center;align-items:center}
   #answer .el .txt{text-align:center;font-size:clamp(26px,7.5vw,32px);line-height:1.25;font-weight:650;padding-top:0}
   #answer .el .tag{width:32px;height:32px;font-size:15px;border-radius:10px;margin-top:0}
@@ -956,8 +959,10 @@ function renderSession(){
     <div id="stage">
       <div class="dirlabel">${dl}</div>
       ${S.tempoMs ? `<div class="tempobar">${S.state === 'q' ? `<i style="animation-duration:${S.tempoMs}ms"></i>` : ''}</div>` : ''}
-      ${prompt}
-      <div id="answer">${(S.state === 'ans' || S.state === 'flash' || S.state === 'peek') ? (IMGURL.has(it.nums[0]) ? `<img class="ansimg fade" src="${IMGURL.get(it.nums[0])}" alt="">` : '') + answerHtml(it) : ''}</div>
+      <div class="qwrap">
+        ${prompt}
+        <div id="answer">${(S.state === 'ans' || S.state === 'flash' || S.state === 'peek') ? (IMGURL.has(it.nums[0]) ? `<img class="ansimg fade" src="${IMGURL.get(it.nums[0])}" alt="" style="max-height:110px">` : '') + answerHtml(it) : ''}</div>
+      </div>
     </div>
     <div class="sess-btns">
       <button id="btn-bad" data-act="sess-bad" aria-label="Vergeten">
