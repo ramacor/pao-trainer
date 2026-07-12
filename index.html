@@ -305,6 +305,7 @@ if(!CARDS || !Array.isArray(CARDS) || CARDS.length !== 52){
   LS.set('paoCards', CARDS);
 }
 function saveCards(){ LS.set('paoCards', CARDS); markDirty() }
+if(SET.lang === 'en'){ SET.lang = 'en-GB' } // migratie van oude taalwaarde
 
 function saveList(){ LS.set('paoList', LIST); markDirty() }
 function saveLog(){ if(LOG.length > 6000) LOG = LOG.slice(LOG.length - 6000); LS.set('paoLog', LOG); markDirty() }
@@ -316,8 +317,10 @@ function saveSet(){ LS.set('paoSettings', SET) }
 const $ = s => document.querySelector(s);
 const pad2 = n => String(n).padStart(2, '0');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const tr = (nl, en) => SET.lang === 'en' ? en : nl;
-const tx = v => (v && typeof v === 'object' && !Array.isArray(v)) ? (v[SET.lang] || v.nl) : v;
+const langBase = () => (SET.lang || 'nl').startsWith('en') ? 'en' : 'nl';
+const tr = (nl, en) => langBase() === 'en' ? en : nl;
+const tx = v => (v && typeof v === 'object' && !Array.isArray(v)) ? (v[SET.lang] || v[langBase()] || v.nl) : v;
+const locale = () => SET.lang === 'en-US' ? 'en-US' : langBase() === 'en' ? 'en-GB' : 'nl-NL';
 const ELS = ['p','a','o'];
 const ELNAME = {p:{nl:'Persoon',en:'Person'}, a:{nl:'Actie',en:'Action'}, o:{nl:'Object',en:'Object'}};
 const elName = el => tx(ELNAME[el]);
@@ -376,8 +379,8 @@ function speak(txt){
   try{
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(txt);
-    u.lang = 'nl-NL'; u.rate = 1.02;
-    const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith('nl'));
+    u.lang = locale(); u.rate = 1.02;
+    const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith(langBase()));
     if(v) u.voice = v;
     speechSynthesis.speak(u);
   }catch(e){}
@@ -550,7 +553,7 @@ function genSyncCode(){
 }
 function syncStatus(msg){
   const el = $('#sync-status');
-  if(el) el.textContent = msg || (SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL') : '');
+  if(el) el.textContent = msg || (SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(locale()) : '');
 }
 function cloudOnlyModal(){
   openModal(`
@@ -1021,7 +1024,7 @@ function sessionStats(r){
   };
 }
 function fmtDate(ts){
-  return new Date(ts).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+  return new Date(ts).toLocaleString(locale(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
 }
 function turnRanks(r){
   const idx = r.turns.map((t, i) => ({i, ms: t.ms, ok: t.ok}));
@@ -1637,9 +1640,18 @@ function viewSettings(){
         <div class="grow">${tr('Weergave', 'Appearance')}</div>
         <div class="seg" style="flex:none;width:200px">${[['auto','Auto'],['light', tr('Licht', 'Light')],['dark', tr('Donker', 'Dark')]].map(([v,t]) => `<button class="${SET.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}">${t}</button>`).join('')}</div>
       </div>
-      <div class="row">
-        <div class="grow">${tr('Taal', 'Language')}</div>
-        <div class="seg" style="flex:none;width:200px">${[['nl','Nederlands'],['en','English']].map(([v,t]) => `<button class="${SET.lang === v ? 'on' : ''}" data-act="lang" data-v="${v}">${t}</button>`).join('')}</div>
+      <div>
+        <div style="margin-bottom:8px">${tr('Taal', 'Language')}</div>
+        <div class="seg" style="flex-wrap:wrap;gap:4px">${[
+          ['nl', '🇳🇱', 'Nederlands', true],
+          ['en-GB', '🇬🇧', 'English (UK)', true],
+          ['en-US', '🇺🇸', 'English (US)', true],
+          ['es', '🇪🇸', 'Español', false],
+          ['fr', '🇫🇷', 'Français', false],
+          ['de', '🇩🇪', 'Deutsch', false],
+          ['it', '🇮🇹', 'Italiano', false]
+        ].map(([v, flag, name, ready]) => `<button class="${SET.lang === v ? 'on' : ''}" data-act="lang" data-v="${v}" ${ready ? '' : 'disabled'} style="${ready ? '' : 'opacity:.4'}">${flag} ${name}</button>`).join('')}</div>
+        <div class="hint" style="margin-top:6px">${tr('Grijze talen komen binnenkort beschikbaar.', 'Greyed-out languages are coming soon.')}</div>
       </div>
       <div class="row">
         <div class="grow">Audio <div class="hint">${tr('leest het nummer voor, handig in het donker', 'reads the number aloud, handy in the dark')}</div></div>
@@ -1671,7 +1683,7 @@ function viewSettings(){
       ${SET.syncOn && SET.syncCode ? `
         <div class="hint">${tr('Je gegevens (lijst, kaarten, statistieken, workouts) synchroniseren automatisch. Foto’s niet.', 'Your data (list, cards, statistics, workouts) syncs automatically. Photos excluded.')}</div>
         <div class="row"><span class="numfont" style="font-weight:700;letter-spacing:.05em">${esc(SET.syncCode)}</span><span class="grow"></span><button class="btn small quiet" data-act="sync-copy">${tr('Kopieer', 'Copy')}</button></div>
-        <div class="hint" id="sync-status">${SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(SET.lang === 'en' ? 'en-GB' : 'nl-NL') : ''}</div>
+        <div class="hint" id="sync-status">${SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(locale()) : ''}</div>
         <div class="row" style="gap:10px">
           <button class="btn quiet small grow" data-act="sync-now">${tr('Nu synchroniseren', 'Sync now')}</button>
           <button class="btn quiet small grow" data-act="sync-off" style="color:var(--bad-ink)">${tr('Zet uit', 'Turn off')}</button>
@@ -1874,7 +1886,7 @@ function viewStats(){
   if(trendMode === 'sess'){
     for(const r of sessHist().slice(-12)){
       const st = sessionStats(r);
-      trend.push({v: st.avg, label: new Date(r.ts).toLocaleDateString(SET.lang === 'en' ? 'en-GB' : 'nl-NL', {day:'numeric', month:'numeric'})});
+      trend.push({v: st.avg, label: new Date(r.ts).toLocaleDateString(locale(), {day:'numeric', month:'numeric'})});
     }
   } else if(trendMode === 'week'){
     const wk = 7*24*3600e3, now = Date.now();
