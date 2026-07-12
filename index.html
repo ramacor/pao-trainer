@@ -174,6 +174,12 @@
   .athcard{display:flex;gap:14px;align-items:center;text-align:left;width:100%;padding:14px}
   .athcard .teaser{font-size:13.5px;color:var(--ink2);margin-top:4px;line-height:1.45}
   .ath-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+  .athav{position:relative;width:64px;height:64px;border-radius:18px;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center}
+  .athav b{color:rgba(255,255,255,.95);font-size:21px;font-family:ui-rounded,-apple-system,system-ui,sans-serif;font-weight:800}
+  .athav img,.athhero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%}
+  .athhero{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .athhero b{color:rgba(255,255,255,.95);font-size:56px;font-family:ui-rounded,-apple-system,system-ui,sans-serif;font-weight:800}
+  .backbtn{display:inline-flex;align-items:center;gap:2px;color:var(--ink2);font-weight:600;font-size:15px;margin-bottom:12px;padding:4px 8px 4px 0}
 
   /* ---------- reeks-proef ---------- */
   .seqrows{display:flex;flex-direction:column;gap:12px;align-items:center}
@@ -1276,7 +1282,7 @@ function stopSeq(){
 
 /* ================= kampioenen ================= */
 const ATHLETES = [
-  {id:'mullen', ini:'AM', g1:'#6C56E0', g2:'#0E8A6B', name:'Alex Mullen',
+  {id:'mullen', ini:'AM', g1:'#6C56E0', g2:'#0E8A6B', img:'athletes/mullen.jpg', name:'Alex Mullen',
    sub:{nl:'3× wereldkampioen', en:'3× World Memory Champion'},
    teaser:{nl:'Traint 30 minuten per dag: een kwart pure snelheidsdrills, de rest complete wedstrijd-events — altijd inclusief het terughalen.',
            en:'Trains 30 minutes a day: a quarter pure speed drills, the rest full competition events — always including the recall.'},
@@ -1290,7 +1296,7 @@ const ATHLETES = [
      {label:{nl:'Deel 1 · Tempodrill (5 min)', en:'Part 1 · Tempo drill (5 min)'}, w:{id:'ath-mullen', name:'Mullen · tempodrill', mode:'all', len:2, dir:'pao', smart:true, tempo:3, limit:5}},
      {label:{nl:'Deel 2 · Reeks-proef op jouw level', en:'Part 2 · Sequence test at your level'}, seq:true}
    ]},
-  {id:'obrien', ini:'DO', g1:'#B4740A', g2:'#6C56E0', name:'Dominic O’Brien',
+  {id:'obrien', ini:'DO', g1:'#B4740A', g2:'#6C56E0', img:'athletes/obrien.jpg', name:'Dominic O’Brien',
    sub:{nl:'8× wereldkampioen', en:'8× World Memory Champion'},
    teaser:{nl:'Acht wereldtitels. Zijn beroemde ‘Rule of Five’: vijf herhalingen op het juiste moment maken een herinnering vrijwel permanent.',
            en:'Eight world titles. His famous ‘Rule of Five’: five repetitions at the right moments make a memory virtually permanent.'},
@@ -1312,7 +1318,7 @@ const ATHLETES = [
    how:{nl:['Precies 2 minuten — de timer stopt vanzelf.', 'Alle nummers, getal → P·A·O.', 'Klaar voordat je koffie is afgekoeld. Morgen weer.'],
         en:['Exactly 2 minutes — the timer stops by itself.', 'All numbers, number → P·A·O.', 'Done before your coffee cools down. Again tomorrow.']},
    actions:[{label:{nl:'Start dagelijkse dosis (2 min)', en:'Start daily dose (2 min)'}, w:{id:'ath-vonessen', name:'Von Essen · dagelijkse dosis', mode:'all', len:2, dir:'pao', smart:true, limit:2}}]},
-  {id:'yanjaa', ini:'YW', g1:'#6C56E0', g2:'#B4740A', name:'Yanjaa Wintersoul',
+  {id:'yanjaa', ini:'YW', g1:'#6C56E0', g2:'#B4740A', img:'athletes/yanjaa.jpg', name:'Yanjaa Wintersoul',
    sub:{nl:'Grootmeester · meervoudig wereldrecordhouder', en:'Grandmaster · multiple world-record holder'},
    teaser:{nl:'Memoriseerde de complete IKEA-catalogus. Haar kracht: hoe absurder en zintuiglijker het beeld, hoe beter het blijft plakken.',
            en:'Memorized the entire IKEA catalogue. Her strength: the more absurd and sensory the image, the better it sticks.'},
@@ -1326,7 +1332,7 @@ const ATHLETES = [
      {label:{nl:'Deel 1 · Scènetraining (5 min)', en:'Part 1 · Scene training (5 min)'}, w:{id:'ath-yanjaa1', name:'Yanjaa · scènes', mode:'all', len:6, dir:'pao', smart:false, limit:5}},
      {label:{nl:'Deel 2 · Uitgesteld terughalen (5 min)', en:'Part 2 · Delayed recall (5 min)'}, w:{id:'ath-yanjaa2', name:'Yanjaa · uitgesteld', mode:'all', len:2, dir:'pao', smart:true, delayed:true, limit:5}}
    ]},
-  {id:'konrad', ini:'BK', g1:'#0E8A6B', g2:'#B4740A', name:'Boris Konrad',
+  {id:'konrad', ini:'BK', g1:'#0E8A6B', g2:'#B4740A', img:'athletes/konrad.jpg', name:'Boris Konrad',
    sub:{nl:'Grootmeester & neurowetenschapper', en:'Grandmaster & neuroscientist'},
    teaser:{nl:'Geheugengrootmeester én hersenonderzoeker in Nijmegen. Zijn les: juist beelden die op elkaar lijken moet je bewust uit elkaar trekken.',
            en:'Memory grandmaster and brain researcher in Nijmegen. His lesson: images that resemble each other are exactly the ones to pull apart deliberately.'},
@@ -1347,22 +1353,22 @@ function avatarSvg(a, size){
     <text x="32" y="40" text-anchor="middle" font-size="21" font-weight="800" fill="rgba(255,255,255,.95)" font-family="ui-rounded,-apple-system,system-ui,sans-serif">${a.ini}</text>
   </svg>`;
 }
-function openAthlete(id){
-  const a = ATHLETES.find(x => x.id === id);
-  if(!a) return;
-  openModal(`
-    <div class="row" style="gap:14px;margin-bottom:14px">
-      ${avatarSvg(a, 84)}
-      <div><h2 style="margin:0 0 2px">${a.name}</h2><div class="hint">${tx(a.sub)}</div></div>
-    </div>
+function athAvatar(a){
+  return `<span class="athav" style="background:linear-gradient(135deg, ${a.g1}, ${a.g2})"><b>${a.ini}</b>${a.img ? `<img class="athphoto" src="${a.img}" alt="">` : ''}</span>`;
+}
+function viewAthlete(a){
+  return `
+    <button class="backbtn" data-act="ath-back">‹ Workouts</button>
+    <div class="athhero" style="background:linear-gradient(135deg, ${a.g1}, ${a.g2})"><b>${a.ini}</b>${a.img ? `<img class="athphoto" src="${a.img}" alt="${a.name}">` : ''}</div>
+    <h1 style="margin:0 0 2px">${a.name}</h1>
+    <div class="hint" style="margin-bottom:16px">${tx(a.sub)}</div>
     <div class="stack">
       <div style="font-size:15px;line-height:1.55">${tx(a.desc)}</div>
-      <div><div class="label" style="margin-bottom:6px">${tr('Waarom dit werkt', 'Why this works')}</div><div class="hint" style="font-size:14px;line-height:1.5">${tx(a.why)}</div></div>
-      <div><div class="label" style="margin-bottom:6px">${tr('Zo ziet de workout eruit', 'What the workout looks like')}</div><ol class="ath-steps">${tx(a.how).map(s => `<li>${s}</li>`).join('')}</ol></div>
+      <div class="card stack" style="gap:8px"><div class="label" style="color:var(--a)">${tr('Waarom dit werkt', 'Why this works')}</div><div class="hint" style="font-size:14px;line-height:1.5">${tx(a.why)}</div></div>
+      <div class="card stack" style="gap:8px"><div class="label" style="color:var(--o)">${tr('Zo ziet de workout eruit', 'What the workout looks like')}</div><ol class="ath-steps">${tx(a.how).map(s => `<li>${s}</li>`).join('')}</ol></div>
       ${a.actions.map((x, i) => `<button class="btn ${i ? 'quiet' : ''}" data-act="ath-start" data-id="${a.id}" data-i="${i}">${tx(x.label)}</button>`).join('')}
       <div class="hint" style="font-size:12px">${tr('Vrij vertaald naar de trainingsvormen van deze app.', 'Freely translated to the training modes of this app.')}</div>
-      <button class="btn quiet" data-act="modal-close">${tr('Sluit', 'Close')}</button>
-    </div>`);
+    </div>`;
 }
 
 /* ================= system-builder wizard ================= */
@@ -1577,6 +1583,7 @@ let TAB = 'train';
 let LIBQ = '';
 let LIBSRC = 'num';
 let STATSEL = null;
+let ATHVIEW = null;
 function render(){
   $('#tabbar').innerHTML = [
     ['train', tr('Trainen', 'Train'), ICONS.train], ['workouts', 'Workouts', ICONS.workouts],
@@ -1587,6 +1594,8 @@ function render(){
   else if(TAB === 'workouts') v.innerHTML = viewWorkouts();
   else if(TAB === 'lib') v.innerHTML = viewLib();
   else v.innerHTML = viewStats();
+  // foto's die niet laden (bijv. in de artifact-preview): terugvallen op initialen-avatar
+  v.querySelectorAll('img.athphoto').forEach(im => im.addEventListener('error', () => im.remove()));
 }
 function viewTrain(){
   const rec = recommendation();
@@ -1785,13 +1794,18 @@ function viewWorkouts(){
       </button>
       <button class="btn small" data-act="wk-play" data-id="${w.id}">Start</button>
     </div>`;
+  if(ATHVIEW){
+    const a = ATHLETES.find(x => x.id === ATHVIEW);
+    if(a) return viewAthlete(a);
+    ATHVIEW = null;
+  }
   return `
     <h1>Workouts</h1>
     <div class="stack">
       <div class="label">${tr('Train als een kampioen', 'Train like a champion')}</div>
       ${ATHLETES.map(a => `
         <button class="card athcard" data-act="ath-open" data-id="${a.id}">
-          ${avatarSvg(a, 64)}
+          ${athAvatar(a)}
           <span class="grow">
             <div style="font-weight:800">${a.name}</div>
             <div class="hint" style="font-size:12px">${tx(a.sub)}</div>
@@ -2165,7 +2179,7 @@ document.addEventListener('click', ev => {
   if(!t) return;
   const act = t.dataset.act;
 
-  if(act === 'tab'){ TAB = t.dataset.tab; STATSEL = null; render(); return }
+  if(act === 'tab'){ TAB = t.dataset.tab; STATSEL = null; ATHVIEW = null; render(); return }
   if(act === 'settings'){ openSettings(); return }
   if(act === 'sess-log'){ openSessionDetail(+t.dataset.ts); return }
   if(act === 'sess-sugg'){
@@ -2309,7 +2323,8 @@ document.addEventListener('click', ev => {
     if(Q && Q.clock) clearInterval(Q.clock);
     startSeq(lv); return;
   }
-  if(act === 'ath-open'){ openAthlete(t.dataset.id); return }
+  if(act === 'ath-open'){ ATHVIEW = t.dataset.id; render(); $('#view').scrollTop = 0; return }
+  if(act === 'ath-back'){ ATHVIEW = null; render(); return }
   if(act === 'ath-start'){
     const a = ATHLETES.find(x => x.id === t.dataset.id);
     const action = a && a.actions[+t.dataset.i];
