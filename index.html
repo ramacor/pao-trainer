@@ -438,9 +438,11 @@ async function syncPull(interactive){
       }
       SET.syncDirty = false; saveSet();
       if(interactive) toast(changedLocal ? tr('Gesynchroniseerd — wijzigingen opgehaald', 'Synced — changes pulled') : tr('Gesynchroniseerd', 'Synced'));
+      syncPhotos();
     } else {
       syncBusy = false; await syncPush();
       if(interactive) toast(tr('Gesynchroniseerd', 'Synced'));
+      syncPhotos();
       return;
     }
     syncStatus();
@@ -596,19 +598,87 @@ function setImgUrl(n, blob){
   const old = IMGURL.get(n); if(old) URL.revokeObjectURL(old);
   IMGURL.set(n, URL.createObjectURL(blob));
 }
-async function imgSet(n, blob){ await idbReq('readwrite', s => s.put(blob, n)); setImgUrl(n, blob) }
+function imgMeta(){ return LS.get('paoImgMeta', {}) }
+function stampImgMeta(n, del){
+  const m = imgMeta();
+  m[n] = {t: Date.now(), del: del ? 1 : 0};
+  LS.set('paoImgMeta', m);
+  markPhotosDirty();
+}
+async function imgSet(n, blob){ await idbReq('readwrite', s => s.put(blob, n)); setImgUrl(n, blob); stampImgMeta(n, false) }
 async function imgDel(n){
   await idbReq('readwrite', s => s.delete(n));
   const u = IMGURL.get(n); if(u) URL.revokeObjectURL(u);
   IMGURL.delete(n);
+  stampImgMeta(n, true);
 }
 async function imgLoadAll(){
   IDB = await idbOpen();
   if(!IDB) return;
   try{
     const keys = await idbReq('readonly', s => s.getAllKeys());
-    for(const k of keys){ const b = await idbReq('readonly', s => s.get(k)); if(b) setImgUrl(k, b) }
+    const m = imgMeta();
+    let backfill = false;
+    for(const k of keys){
+      const b = await idbReq('readonly', s => s.get(k));
+      if(b) setImgUrl(k, b);
+      if(!m[k]){ m[k] = {t: 1, del: 0}; backfill = true }
+    }
+    if(backfill) LS.set('paoImgMeta', m);
   }catch(e){}
+}
+function blobToDataURL(b){
+  return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b) });
+}
+/* foto-sync: aparte cloud-rij onder <synccode>:PHOTOS, per foto laatste-bewerking-wint */
+let photoTimer = null, photoBusy = false;
+function markPhotosDirty(){
+  if(!SET.syncOn || !SET.syncCode) return;
+  clearTimeout(photoTimer);
+  photoTimer = setTimeout(() => syncPhotos(), 4000);
+}
+async function syncPhotos(){
+  if(!SET.syncOn || !SET.syncCode || !IDB || photoBusy) return;
+  photoBusy = true;
+  try{
+    const code = (SET.syncCode + ':PHOTOS').toUpperCase();
+    const hdr = {'content-type':'application/json', 'x-sync-code':code};
+    const r = await fetch(SYNC_URL, {headers:{'x-sync-code':code}});
+    if(!r.ok) throw new Error('http ' + r.status);
+    const d = await r.json();
+    const remote = (d && d.payload && d.payload.imgs) || {};
+    const meta = imgMeta();
+    let changedLocal = false, needPush = false;
+    for(const k in remote){
+      const rm = remote[k], lm = meta[k];
+      if(!lm || (rm.t || 0) > (lm.t || 0)){
+        const n = +k;
+        if(rm.del){
+          try{ await idbReq('readwrite', s => s.delete(n)) }catch(e){}
+          const u = IMGURL.get(n); if(u){ URL.revokeObjectURL(u); IMGURL.delete(n) }
+        } else if(rm.d){
+          try{ const b = dataURLtoBlob(rm.d); await idbReq('readwrite', s => s.put(b, n)); setImgUrl(n, b) }catch(e){}
+        }
+        meta[k] = {t: rm.t || 0, del: rm.del ? 1 : 0};
+        changedLocal = true;
+      } else if((lm.t || 0) > (rm.t || 0)) needPush = true;
+    }
+    for(const k in meta){ if(!remote[k]) needPush = true }
+    LS.set('paoImgMeta', meta);
+    if(changedLocal && !S && !Q) render();
+    if(needPush){
+      const imgs = {};
+      for(const k in meta){
+        if(meta[k].del){ imgs[k] = {t: meta[k].t, del: 1}; continue }
+        try{
+          const b = await idbReq('readonly', s => s.get(+k));
+          if(b) imgs[k] = {t: meta[k].t, d: await blobToDataURL(b)};
+        }catch(e){}
+      }
+      await fetch(SYNC_URL, {method:'PUT', headers:hdr, body:JSON.stringify({payload:{imgs}})});
+    }
+  }catch(e){}
+  photoBusy = false;
 }
 async function resizeImage(file, max = 600){
   const url = URL.createObjectURL(file);
@@ -1782,7 +1852,7 @@ function viewSettings(){
       <div class="card stack" style="gap:10px">
       <div class="label" style="color:var(--o)">Cloud-sync</div>
       ${SET.syncOn && SET.syncCode ? `
-        <div class="hint">${tr('Je gegevens (lijst, kaarten, statistieken, workouts) synchroniseren automatisch. Foto’s niet.', 'Your data (list, cards, statistics, workouts) syncs automatically. Photos excluded.')}</div>
+        <div class="hint">${tr('Je gegevens synchroniseren automatisch: lijst, kaarten, statistieken, workouts én foto’s.', 'Your data syncs automatically: list, cards, statistics, workouts and photos.')}</div>
         <div class="row"><span class="numfont" style="font-weight:700;letter-spacing:.05em">${esc(SET.syncCode)}</span><span class="grow"></span><button class="btn small quiet" data-act="sync-copy">${tr('Kopieer', 'Copy')}</button></div>
         <div class="hint" id="sync-status">${SET.lastSync ? tr('Laatste sync: ', 'Last sync: ') + new Date(SET.lastSync).toLocaleString(locale()) : ''}</div>
         <div class="row" style="gap:10px">
@@ -2129,7 +2199,7 @@ function openLibEdit(n){
           <label class="btn quiet small filebtn" style="flex:none">${IMGURL.has(n) ? tr('Vervang foto', 'Replace photo') : tr('Foto toevoegen', 'Add photo')}<input type="file" accept="image/*" id="ed-img" data-n="${n}"></label>
           ${IMGURL.has(n) ? `<button class="btn quiet small" data-act="img-del" data-n="${n}" style="color:var(--bad-ink)">${tr('Verwijder', 'Delete')}</button>` : ''}
         </div>
-        <div class="hint" style="margin-top:6px">${tr("Wordt direct verkleind opgeslagen (±50 KB). Foto's zitten alleen in de bestands-backup, niet in de tekst-backup.", 'Stored immediately at reduced size (±50 KB). Photos are only included in the file backup, not the text backup.')}</div>
+        <div class="hint" style="margin-top:6px">${tr("Wordt direct verkleind opgeslagen (±50 KB) en synct mee via cloud-sync. In backups: alleen in de bestands-backup.", 'Stored immediately at reduced size (±50 KB) and included in cloud sync. In backups: file backup only.')}</div>
       </div>
       <div class="row">
         <div class="grow">${tr('Niet meer tonen in randomiser', 'Hide from randomizer')} <div class="hint">${tr('voor items die je al vlekkeloos kent', 'for items you already know flawlessly')}</div></div>
@@ -2325,6 +2395,7 @@ document.addEventListener('click', ev => {
     SET.syncCode = code; SET.syncOn = true; SET.lastSync = null; SET.syncDirty = true; saveSet();
     syncReq('PUT', {payload: syncPayload()}).then(d => {
       SET.lastSync = d.updated_at; SET.syncDirty = false; saveSet();
+      syncPhotos();
       closeModal(); render();
       openModal(`
         <h2>${tr('Sync staat aan', 'Sync is on')}</h2>
@@ -2349,6 +2420,7 @@ document.addEventListener('click', ev => {
       if(d && d.payload){
         applySyncPayload(d.payload);
         SET.lastSync = d.updated_at; SET.syncDirty = false; saveSet();
+        syncPhotos();
         closeModal(); render(); toast(tr('Gekoppeld — gegevens opgehaald', 'Linked — data pulled'));
       } else {
         SET.syncOn = false; SET.syncCode = ''; saveSet();
