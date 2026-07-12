@@ -180,6 +180,8 @@
   .athhero{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
   .athhero b{color:rgba(255,255,255,.95);font-size:56px;font-family:ui-rounded,-apple-system,system-ui,sans-serif;font-weight:800}
   .backbtn{display:inline-flex;align-items:center;gap:2px;color:var(--ink2);font-weight:600;font-size:15px;margin-bottom:12px;padding:4px 8px 4px 0}
+  .rectile{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%;padding:18px 16px;border-radius:16px;background:linear-gradient(135deg,#6C56E0,#0E8A6B);box-shadow:var(--shadow)}
+  .rectile:active{opacity:.88}
 
   /* ---------- reeks-proef ---------- */
   .seqrows{display:flex;flex-direction:column;gap:12px;align-items:center}
@@ -1554,7 +1556,8 @@ function render(){
   $('#tabbar').innerHTML = [
     ['train', tr('Trainen', 'Train'), ICONS.train], ['workouts', 'Workouts', ICONS.workouts],
     ['lib', tr('Bibliotheek', 'Library'), ICONS.lib], ['stats', tr('Inzicht', 'Insights'), ICONS.stats]
-  ].map(([id, name, ico]) => `<button class="${TAB === id ? 'on' : ''}" data-act="tab" data-tab="${id}">${ico}<span>${name}</span></button>`).join('');
+  ].map(([id, name, ico]) => `<button class="${TAB === id ? 'on' : ''}" data-act="tab" data-tab="${id}">${ico}<span>${name}</span></button>`).join('')
+  + `<button data-act="settings">${ICONS.gear}<span>${tr('Instellingen', 'Settings')}</span></button>`;
   const v = $('#view');
   if(TAB === 'train') v.innerHTML = viewTrain();
   else if(TAB === 'workouts') v.innerHTML = viewWorkouts();
@@ -1566,10 +1569,7 @@ function render(){
 function viewTrain(){
   const due = dueNumbers();
   return `
-    <div class="row" style="margin-bottom:14px">
-      <h1 class="grow" style="margin:0">PAO Trainer</h1>
-      <button class="gearbtn" data-act="settings" aria-label="${tr('Instellingen', 'Settings')}">${ICONS.gear}</button>
-    </div>
+    <h1>PAO Trainer</h1>
     <div class="stack">
       ${(() => {
         const rm = reminderDue();
@@ -1594,6 +1594,21 @@ function viewTrain(){
           : tr('Willekeurig behandelt alle nummers gelijk; Slim geeft zwakke en vervallen nummers voorrang.', 'Random treats all numbers equally; Smart prioritizes weak and due numbers.')}</div>
         <button class="btn" data-act="start-quick">Start</button>
       </div>
+      ${(() => {
+        const st = buildStats();
+        let dir = 'pao', worst = 2;
+        for(const el of ELS){
+          const vals = [];
+          for(let n = 0; n < 100; n++){ const s = elemStrength(st, n, el); if(s !== null) vals.push(s) }
+          if(vals.length >= 5){ const avg = vals.reduce((a, b) => a + b, 0) / vals.length; if(avg < worst){ worst = avg; dir = el } }
+        }
+        return `
+        <button class="rectile" data-act="start-smart" data-dir="${dir}">
+          <span class="label" style="color:rgba(255,255,255,.8)">${tr('Aanbevolen training', 'Recommended training')}</span>
+          <span style="font-weight:800;font-size:17.5px;color:#fff">${tr('De slimme mix van vandaag', "Today's smart mix")}</span>
+          <span style="font-size:13px;color:rgba(255,255,255,.85)">${dirLabel(dir)} · 5 min · ${tr('zwakke en vervallen nummers eerst', 'weak and due numbers first')}</span>
+        </button>`;
+      })()}
       <div class="card stack" style="gap:10px">
         <div class="label" style="color:var(--o)">${tr('Reeks-proef', 'Sequence test')}</div>
         <div class="hint">${tr('De echte test: memoriseer een cijferreeks op eigen tempo en typ hem daarna terug.', 'The real test: memorize a digit sequence at your own pace, then type it back.')}</div>
@@ -2237,6 +2252,10 @@ document.addEventListener('click', ev => {
   if(act === 'qtimer'){ SET.qTimer = +t.dataset.v; saveSet(); render(); return }
   if(act === 'qtempo'){ SET.qTempo = +t.dataset.v; saveSet(); render(); return }
   if(act === 'qmode'){ SET.qMode = t.dataset.v; saveSet(); render(); return }
+  if(act === 'start-smart'){
+    startSession({id:'rec', name:tr('Aanbevolen training', 'Recommended training'), mode:'all', len:2, dir:t.dataset.dir, smart:true, limit:5});
+    return;
+  }
   if(act === 'chart-avg'){
     SET.chartAvg = !SET.chartAvg;
     saveSet();
